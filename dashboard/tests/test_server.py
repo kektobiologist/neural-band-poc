@@ -14,6 +14,23 @@ from dashboard import server as dashboard_server
 
 
 class DashboardTests(unittest.TestCase):
+    def test_identity_is_used_only_for_selected_band_and_not_exposed(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(dashboard_server, 'CAPTURES', Path(directory)):
+            root = Path(directory)
+            key = root / 'local-owner.pem'
+            (root / 'dashboard-selected-band.json').write_text(json.dumps({'address':'band-a','name':'Meta Band'}))
+            (root / 'dashboard-identities.json').write_text(json.dumps({'band-a':str(key)}))
+            dashboard = dashboard_server.Dashboard()
+            commands = []
+            with patch.object(dashboard, '_child', side_effect=lambda command, timeout: commands.append(command) or 0):
+                dashboard._run('check')
+                self.assertIn('--identity-key', commands[-1])
+                self.assertEqual(commands[-1][commands[-1].index('--identity-key') + 1], str(key.resolve()))
+                dashboard.identifier = 'band-b'
+                dashboard._run('check')
+                self.assertNotIn('--identity-key', commands[-1])
+            self.assertNotIn(str(key), json.dumps(dashboard.state()))
+
     def test_saved_or_stalled_pose_is_not_live_and_secrets_are_excluded(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(dashboard_server,'CAPTURES',Path(directory)):
             dashboard = dashboard_server.Dashboard()

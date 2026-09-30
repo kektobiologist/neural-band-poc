@@ -295,6 +295,10 @@ class Dashboard:
             command = [sys.executable, "-u", str(INSTRUMENTATION / "mac_band_probe.py"), self.identifier,
                        "--seconds", "300" if mode == "dial" else "60" if mode == "raw-emg" else "30", "--end-link-setup", "--query-device-info",
                        "--query-config", "--output", str(self.capture)]
+            identities = read_json(CAPTURES / "dashboard-identities.json", {})
+            identity = identities.get(self.identifier) if isinstance(identities, dict) else None
+            if identity:
+                command += ["--identity-key", str(Path(identity).expanduser().resolve())]
             if mode != "check":
                 command += ["--stream-control", mode]
                 if self.requested_hand is not None:

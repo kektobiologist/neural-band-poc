@@ -13,7 +13,20 @@ python3 instrumentation/mac_band_probe.py BAND_COREBLUETOOTH_UUID \
   --seconds 35 --output captures/mac-probe.jsonl
 ```
 
-The probe reads the band's PSM characteristic, opens L2CAP PSM 255, generates fresh P-256 keys/challenge/seed/IV/counter, and implements the observed parameter-3 exchange. It sends an empty identity/certificate query from the pinned public Starcruiser source. Received ciphertext must pass its MAC before plaintext is logged. It handles split/coalesced receive data and partial writes, and closes the connection when its duration expires. Capture files include session material for offline replay and must remain local/ignored. An existing output file is never overwritten.
+The probe reads the advertised L2CAP PSM and supports parameter-3 and parameter-26 transport. Without an owner key it offers mask 27 and chooses TX 26 when available (otherwise 3). With `--identity-key`, it offers mask 31, chooses TX 27 when available, and completes enrolled-owner trust before input requests. RX 3 and 26 are accepted. On firmware `5c2b1ca1f73b+`, the enrolled-owner path has now delivered device info, motion, gestures, and raw EMG; see [the investigation](firmware-5c2b1ca1f73b.md). Whether owner authentication is strictly required on this firmware remains unproven: earlier unauthenticated tests were not controlled for competing connections and pairing state. Received ciphertext must pass its MAC before plaintext is logged. Capture files include session material and must remain local/ignored. An existing output file is never overwritten.
+
+For the parameter-26 investigation, use `--query-manifest` without
+`--end-link-setup` or stream options. It recognizes Constellation service `0x4f`,
+requests its manifest once, and reports whether the returned bytes are empty
+or incomplete. It does not establish trust, register an app, or enable sensors.
+Two live sessions returned empty completion followed by another trust offer;
+see [the investigation](firmware-5c2b1ca1f73b.md).
+
+```sh
+.venv/bin/python instrumentation/mac_band_probe.py BAND_UUID \
+  --query-manifest --seconds 10 --output captures/constellation-new.jsonl
+```
+
 
 The initial certificate probes established direct encrypted transport. Input-service access subsequently succeeded after `--end-link-setup`, which sends the observed `EndLinkSetup` message with a fresh link UUID. The earlier `0xc001` result is historical; its exact error definition remains unknown.
 
@@ -195,3 +208,60 @@ python3 instrumentation/mac_band_probe.py BAND_COREBLUETOOTH_UUID --query-device
 ```
 
 Full events stay in the capture; a curated `.live.json` sidecar supplies the fast dashboard hand endpoint. Gyro is type `0x0200020f`, quaternion `0x02000212`, recognized gestures `0x0200020d`. `host_loop_delay` records receive-loop pauses over 100 ms. Probe completion now requires clean framing and explicit disable acknowledgements for the requested streams. The vendored Three.js files include their license and source information under `dashboard/static/vendor/`.
+
+
+## OnePlus 10 Pro / Android 15 rootless check (2026-09-30)
+
+ADB platform-tools 37.0.1 connected to model NE2211. `su -c id` returned
+`su: inaccessible or not found`; shell UID is 2000. Meta AI installed on this
+phone is 290.1.0.42.163, build 969002474 (different from the statically inspected
+292 APK).
+
+Developer Options exposes Disabled, Enabled Filtered, and Enabled HCI modes.
+Enabled was selected. A full Bluetooth off/on was necessary: the first
+`dumpsys bluetooth_manager` still reported `sSnoopLogSettingAtEnable = EMPTY`;
+after the restart it reported `FULL`.
+
+Two `adb bugreport` exports completed successfully, but neither contained a
+btsnoop/btsnooz capture. The second report confirms `persist.bluetooth.btsnooplogmode=full`
+and logs the vendor capture path as
+`/data/misc/bluetooth/cached_hci/btsnoop_hci_20260930_184309.cfa`.
+Direct access to that file is denied to ADB shell. The native logger says it
+skips the btsnooz fallback when full btsnoop logging is enabled.
+
+`com.oplus.logkit` is installed, but launching its MainActivity through ADB
+fails because it requires `com.oplus.permission.safe.LOG`. No permission bypass
+or log upload was attempted. Thus full logging is enabled, but rootless export
+is **not verified** on this build. Bluetooth remains on and HCI logging remains
+Enabled for the next controlled capture; restore Disabled after investigation.
+
+Local-only artifacts: `captures/oneplus/hci-check.zip`,
+`hci-check-restarted.zip`, `bluetooth-dump-restarted.txt`, and
+`inspect_bugreport.py`. Bug reports contain unrelated device diagnostics and
+remain ignored; do not publish them. HCI logs alone would still contain the
+app-layer AirShield ciphertext, not automatically reveal its session keys.
+
+## Paired-owner authentication on firmware 5c2b1ca1f73b+
+
+The rooted Android native capture established an enrolled identity path for
+this firmware. Use `--identity-key /absolute/path/to/local-owner.pem` with the
+Mac probe. The key must already be enrolled with this band; a newly generated
+key is rejected. The option neither enrolls nor changes ownership. The key and
+raw captures must remain local, outside version control.
+
+For the dashboard, ignored `captures/dashboard-identities.json` maps the
+selected CoreBluetooth UUID to the local PEM path. This mapping is used only
+by the subprocess launcher and is not returned by dashboard APIs. Changing
+the selected device does not reuse another device's identity entry.
+
+A paired band may advertise without a name and receive a new CoreBluetooth
+UUID. Discovery recognizes the observed FD5F / manufacturer 427 / 800106
+advertisement family. Verify the band's GATT firmware/PSM before trusting an
+unnamed candidate.
+
+The OnePlus's Bluetooth toggle alone left a live band connection in BLE_ON.
+For the direct Mac test, Meta AI was stopped and `ble_scan_always_enabled` was
+temporarily changed from 1 to 0, bringing the radio to OFF. Keep the phone radio
+and glasses off while using the direct Mac connection. Restore the scan setting
+with `adb shell settings put global ble_scan_always_enabled 1` when returning
+to phone use, then enable Bluetooth normally.
