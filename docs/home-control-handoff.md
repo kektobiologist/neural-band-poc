@@ -57,19 +57,43 @@ Useful primary technical references:
 
 ## Gesture vocabulary discussed, not implemented
 
-The previous proposed mapping was:
+### Original scheme: light and fan
+
+Use finger identity to select the device directly, without a separate device-selection step: index for the light, middle for the fan. Double-taps provide discrete power commands; a held pinch plus wrist roll provides the fan dial interaction.
+
+| Gesture | Action |
+| --- | --- |
+| Index double-tap | Toggle tubelight on/off |
+| Middle double-tap | Toggle fan on/off |
+| Middle pinch/hold plus wrist roll | Adjust fan speed |
+
+The user wanted rapid operation and clear device disambiguation. They also requested haptic feedback to indicate fan dial position; tactile speed detents remain an idea contingent on decoding the haptics command, not an available feature.
+
+### Extended scheme: add the AC
+
+Preserve the light/fan shortcuts in normal mode and introduce a temporary AC context. The combined proposed mapping was:
 
 | Gesture/context | Action |
 | --- | --- |
 | Index double-tap in normal mode | Toggle light |
 | Middle double-tap in normal mode | Toggle fan |
-| Middle pinch/hold plus wrist roll | Adjust fan speed |
-| Right thumb swipe | Enter temporary AC mode |
+| Middle pinch/hold plus wrist roll in normal mode | Adjust fan speed |
+| Right thumb swipe in normal mode | Enter temporary AC mode |
 | Left thumb swipe or five seconds idle | Exit AC mode |
 | Index double-tap in AC mode | Toggle AC power |
 | Index pinch/hold plus wrist roll in AC mode | Adjust temperature |
 
 Suspend normal-mode bindings while AC mode is active. This is a design proposal, not a final tested user preference or deployed appliance controller. Validate disambiguation, accidental activation, gesture deduplication and mode feedback before use. Decide startup state, stale command behavior, explicit on/off versus toggles, and retry/acknowledgement semantics when implementing; no such policy has been implemented here.
+
+### Interaction details still to settle
+
+- Wrist-roll direction, gain, deadband and detent spacing; do not infer these from the animation alone.
+- Fan speed steps and whether adjusting speed while off also powers the fan on.
+- Temperature step size, permitted range and behavior while the AC is off.
+- Reliable feedback for entering/exiting AC mode, including a fallback if band haptics remain unavailable.
+- Exact hold/release and idle-timeout behavior during an active adjustment.
+
+These are open design decisions, not previously agreed bindings. The user's swipe observation supports trying the AC-mode gesture, but their reported initial swipe-acquisition delay should be evaluated in actual use. No up/down swipe appliance actions were assigned in the recorded scheme.
 
 Band-recognized gestures arrive from the band; the host does not run the recognition model for these events. Host logic still interprets/deduplicates events and converts wrist motion into a dial. Synthetic cleanup/release events must not trigger appliance actions. Raw and derived representations of the same gesture must not cause duplicate commands.
 
