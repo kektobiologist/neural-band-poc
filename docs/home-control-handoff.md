@@ -1,0 +1,102 @@
+# Home-control prototype handoff — 2026-10-01
+
+## Goal and user preferences
+
+Use the neural band's recognized gestures to control the user's room appliances with minimal delay after recognition:
+
+- Tubelight: on/off. Exact LED driver or fluorescent ballast is not yet known.
+- Conventional 230 V AC ceiling fan in India, currently using a wall regulator: on/off and speed.
+- Samsung AC with an IR remote: on/off and temperature. Exact AC/remote model remains unknown.
+
+The user reports recognition feels very fast. Thumb swipes work, although initially entering the swipe interaction sometimes takes a little time. Prioritize a fast switching prototype over Home Assistant integration. Avoid cloud dependencies and unnecessary wireless hops. The final prototype should not depend on the Mac. Prefer off-the-shelf parts, searching Amazon India first and Robu second. No parts have been purchased by the agent.
+
+The latest requirement is **no mechanical relay clicking**. The user has also experienced MCU interference with optocoupled mechanical relay boards. Revise the hardware plan toward solid-state outputs; do not continue recommending the earlier mechanical relay board.
+
+## Proposed architecture, not yet implemented
+
+The user intends to use two ESP32 devices because the AC and fan/light controls cannot be colocated:
+
+1. ESP32 #1: receive band events, run the gesture/control state machine, and drive local fan/light control interfaces.
+2. ESP32 #2: sit near the AC and transmit Samsung-compatible IR, receiving commands from #1 over ESP-NOW.
+
+ESP32-S3 was discussed as a candidate. **Direct band connectivity on ESP32 is not established.** BLE L2CAP CoC support in a platform SDK is only a prerequisite; the existing band transport, owner authentication, encryption, and streaming protocol still need porting and hardware validation. Do this feasibility test before treating the two-board architecture as settled. A dedicated Linux SBC remains a fallback connector if the ESP32 port proves unsuitable; the Mac is the current development host only.
+
+No measured end-to-end latency budget exists yet. Do not promise zero radio latency. Measure recognition-event receipt, command dispatch, output activation, and acknowledgement separately. IR transmission and an appliance's internal response are distinct from MCU dispatch time; fan mechanical speed changes and AC compressor delays are not switching latency.
+
+## Latest output-stage decision
+
+| Appliance | Proposed output | Remaining verification |
+| --- | --- | --- |
+| Tubelight | Optically isolated, zero-cross AC solid-state relay (SSR), with an ESP32-compatible input/interface | Actual lamp/driver type, inrush rating, minimum load, off-state leakage, thermal requirements, enclosure and protection |
+| Conventional fan | Isolated, motor-rated TRIAC phase-angle speed controller with zero-cross sensing | Explicit compatibility with this fan, documented control interface and isolation, reliable startup/minimum speed, motor hum and thermal behavior |
+| Samsung AC | IR transmitter driven by the second ESP32 | Model/protocol variant, full-state frame format, emitter coverage and library support |
+
+Optocouplers themselves are not the mechanical/noisy component; optical isolation remains desirable. Removing the relay coil and contacts removes coil flyback and contact arcing from that relay, but does not eliminate all load-related EMI. The user's interference has not been diagnosed: supply dips, shared ground/power paths, contact transients and radiated coupling are possibilities. Do not assert that airborne coil coupling is the cause without measurements.
+
+A zero-cross SSR waits for the next voltage zero crossing: approximately 0–10 ms at 50 Hz. This is a small, bounded switching contribution, not a measured total system latency. A normal on/off zero-cross SSR is **not** a fan speed regulator; do not apply ordinary ESP32 PWM or heater-style burst control to it for this purpose. Phase-angle fan control removes relay clicks but may produce motor hum. SSRs dissipate heat, leak some current while off, and are not a physical mains disconnect. Use an enclosed, appropriately protected assembly and retain a physical disconnect; mains installation needs a qualified electrician.
+
+## Shopping research so far
+
+These are historical listing observations from this conversation, not purchase approvals, certifications, or guaranteed current prices/stock. Recheck before ordering.
+
+| Item | Link and observation | Status |
+| --- | --- | --- |
+| Robocraze 2-channel 5 V optocoupler mechanical relay board | [Amazon B073B6M5JB](https://www.amazon.in/dp/B073B6M5JB); observed ₹209, in stock; advertised 3.3–5 V low-level control | **Superseded** by the user's solid-state requirement; bare board and general contact rating were not proof of lamp-inrush suitability |
+| Xenbrix AC Dimmer V2 | [Amazon B0HBKKW7BT](https://www.amazon.in/dp/B0HBKKW7BT); observed ₹349, in stock; seller advertised 110–230 VAC, 3 A/600 W, 2.8–5.5 V control and induction-fan support | Candidate only; seller claims do not establish isolation, motor rating, or exact ESP32 interface. Obtain schematic/pinout/library and verify before selecting |
+| Four-channel AC dimmer module | [Robu listing](https://robu.in/product/ac-light-lamp-dimming-led-lamp-and-motor-dimmer-module-4-channel/); SKU 890179; observed ₹1,789, out of stock; BTA16-600B and RBDdimmer mentioned | Candidate only; listing had inconsistent channel/voltage descriptions. Not a verified ready-to-install fan regulator |
+| G3MB-202P SSR modules | [Datasheet hosted by Robu](https://robu.in/wp-content/uploads/2017/04/g3mb-ssr-datasheet-1.pdf) | Investigated as an SSR family, **not selected**. Do not treat a generic “2 A” module as verified for LED inrush or ceiling-fan control |
+
+No fully verified off-the-shelf solid-state lighting assembly or fan regulator has been selected. No final complete BOM exists. Still need to select ESP32 boards, isolated power supplies, suitable IR emitter/driver (and optionally receiver for learning/verification), enclosures, terminals, protection and installation accessories. Do not let a cheap listing's wattage alone determine suitability.
+
+Useful primary technical references:
+
+- [Omron SSR application and load guidance](https://www.ia.omron.com/support/guide/18/further_information.html)
+- [Omron SSR terminology, including zero-cross operation](https://www.ia.omron.com/support/guide/18/explanation_of_terms.html)
+- [Omron mechanical relay precautions, including contact-arcing interference](https://www.ia.omron.com/product/cautions/36/safety_precautions.html)
+- [ST induction ceiling-fan TRIAC controller reference](https://www.st.com/ja/evaluation-tools/steval-ihm037v1.html)
+
+## Gesture vocabulary discussed, not implemented
+
+The previous proposed mapping was:
+
+| Gesture/context | Action |
+| --- | --- |
+| Index double-tap in normal mode | Toggle light |
+| Middle double-tap in normal mode | Toggle fan |
+| Middle pinch/hold plus wrist roll | Adjust fan speed |
+| Right thumb swipe | Enter temporary AC mode |
+| Left thumb swipe or five seconds idle | Exit AC mode |
+| Index double-tap in AC mode | Toggle AC power |
+| Index pinch/hold plus wrist roll in AC mode | Adjust temperature |
+
+Suspend normal-mode bindings while AC mode is active. This is a design proposal, not a final tested user preference or deployed appliance controller. Validate disambiguation, accidental activation, gesture deduplication and mode feedback before use. Decide startup state, stale command behavior, explicit on/off versus toggles, and retry/acknowledgement semantics when implementing; no such policy has been implemented here.
+
+Band-recognized gestures arrive from the band; the host does not run the recognition model for these events. Host logic still interprets/deduplicates events and converts wrist motion into a dial. Synthetic cleanup/release events must not trigger appliance actions. Raw and derived representations of the same gesture must not cause duplicate commands.
+
+Custom haptics would be useful for fan speed detents. A `hapticsReq` RPC name/field 17 was recovered in earlier investigation, but its nested parameters have not been decoded and custom haptic playback is **not working/verified**. Do not promise tactile ticks yet.
+
+## Existing Mac/dashboard state and PEM strategy
+
+The existing dashboard is at `http://localhost:8765/`. Its process was running earlier in this conversation; **current liveness was not rechecked for this handoff**. Typical launch command from the repo root is `.venv/bin/python dashboard/server.py`.
+
+The PEM owner identity was provisioned in earlier work. Current `dashboard/server.py` reads `captures/dashboard-identities.json` and passes the selected identity path as `--identity-key` to the band client. Continue using that strategy rather than re-enrolling or replacing the owner identity unnecessarily.
+
+Local ignored artifacts relevant to resuming:
+
+- `captures/dashboard-selected-band.json`: selected band (previously Meta Band 00Z9).
+- `captures/dashboard-identities.json`: mapping of band identifier to owner identity path.
+- `captures/oneplus/paired-session/band-owner-identity.pem`: previously used owner identity. **Private key: never print its contents, commit it, or copy it into documentation.**
+- `captures/mac-band-probe-dashboard-20260930T171050089594.jsonl`: trace examined earlier. Reported 119 non-synthetic raw swipes (26 left, 37 right, 38 down, 18 up), each with a derived equivalent, plus four thumb click events. These are prior trace observations, not a new verification during this documentation update.
+
+The user's real-world observation that swipes work is stronger evidence than merely seeing their enum values. Enum support does not prove every gesture is physically available. Consult `instrumentation/input_service.py`, [gesture notes](gestures.md), [gesture model notes](gesture-models.md), [trust handshake](trust-handshake.md), and [findings](findings.md) for protocol details. This session did not establish table-writing/handwriting recognition as an accessible band feature.
+
+`captures/` is ignored. A fresh clone will not contain the owner PEM or captured traces; the next agent must distinguish local artifacts from tracked project data.
+
+## Suggested continuation
+
+1. Confirm the exact tubelight/driver and fan label, and Samsung AC/remote model, before final component selection.
+2. Find solid-state parts on Amazon India, falling back to Robu. Verify manufacturer documentation, load compatibility, isolation, control voltage/current and thermal requirements. Label unresolved candidates honestly.
+3. Prove band connectivity/authentication on the chosen dedicated controller before buying around an assumed ESP32-only design.
+4. Implement and test the gesture state machine with simulated outputs, then validate timing and interference on the enclosed hardware. No household-output firmware or mains hardware was built in this conversation.
+
+This file records discussion and research. The documentation commit does not change the server, band firmware, authentication implementation, or appliance control behavior.

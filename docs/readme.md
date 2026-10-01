@@ -3,6 +3,7 @@
 setup and everyday use are in the [main readme](../readme.md). commands in these notes run from the repo root. capture filenames refer to the local, ignored `captures/` folder.
 
 - [findings](findings.md): hardware results, verified derivations, stream captures, and known failures.
+- [home-control handoff](home-control-handoff.md): appliance-control goals, solid-state hardware decisions, shopping candidates, and remaining feasibility work (2026-10-01).
 - [protocol](protocol.md): public schemas, pinned source code, and framing references.
 - [gestures](gestures.md): the supplied video references and how the hand illustrates them.
 - [handedness](handedness.md): the native hand setting, read-back checks, and dial direction.
