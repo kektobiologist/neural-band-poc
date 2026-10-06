@@ -4,7 +4,7 @@ Updated: 2026-10-06. Related context: [home-control handoff](home-control-handof
 
 ## Status and evidence
 
-The user confirmed the Robu order was placed on 2026-10-03. The table below records the **last agent-verified cart before checkout**, not an invoice: the user intended to filter items before buying, so reconcile quantities against the delivered parts/invoice before laying out boards. Delivery and physical inspection have not been confirmed. No hardware assembly or tests were performed in this conversation.
+The user confirmed the Robu order was placed on 2026-10-03. The table below records the **last agent-verified cart before checkout**, see the redacted order record [robu-order-3738222-redacted.pdf](robu-order-3738222-redacted.pdf), which matches it line for line: the user intended to filter items before buying, so reconcile quantities against the delivered parts/invoice before laying out boards. Delivery and physical inspection have not been confirmed. No hardware assembly or tests were performed in this conversation.
 
 Last verified cart: **25 paid product lines, ₹5,091.78 including GST**, before any checkout changes or shipping. Prices are historical, not current quotes. No order token, address, payment details, or private browser URL is stored here.
 
@@ -13,7 +13,7 @@ Last verified cart: **25 paid product lines, ₹5,091.78 including GST**, before
 - Two ESP32-S3 N16R8 development boards, one near the fan/light and one near the Samsung AC; ESP-NOW between them.
 - Fan: conventional 230 V AC ceiling fan, controlled with the selected single-channel Robu dimmer. Exact fan label remains unknown.
 - Light: user confirmed an **LED tube, approximately 20–40 W**. Exact driver/inrush characteristics remain unknown. The A03B SSR is a provisional test component, not a validated installed light switch.
-- AC: IR control; do not switch its mains supply. Exact Samsung AC/remote model and protocol variant remain unknown.
+- AC: IR control; do not switch its mains supply. Remote is DB96-25318J; protocol expected to be `SAMSUNG_AC` in IRremoteESP8266, to be confirmed by capture (see handoff).
 - The RF-transmitter/receiver architecture with no ESP at the fan was abandoned. RDL 16-step boards, manual dimmers, digital-pot modifications and SWYAM boards were explored but not ordered in this cart.
 - No mechanical relay clicking; fan hum is a separate consideration. Local operation, low latency and eventual independence from the Mac remain priorities.
 - Which node receives band events is still a software decision. **Direct band transport/authentication on ESP32 is unproven.** Existing Mac software can provide test commands while the port is investigated; buying these boards does not prove that port feasible.
@@ -58,7 +58,7 @@ Robu also automatically included free parts: 3 × Murata DSS1NB32A101Q91A 100 pF
 
 | Qty | Part | Status |
 | ---: | --- | --- |
-| 2 | [Vishay TSAL6200 940 nm IR LEDs](https://in.element14.com/vishay/tsal6200/infrared-emitter-940nm-t-1-3-4/dp/3152856) | Not added on Robu; one emitter plus spare/second direction. Another emitter requires checking its ratings and recalculating the driver. |
+| 5 | 5 mm 940 nm IR emitters (CentIoT kit, [Amazon B071NK3KD4](https://www.amazon.in/dp/B071NK3KD4), with 5 photodiodes) | **Ordered 2026-10-06** in place of the TSAL6200. No datasheet; listed Vf 1.2–1.4 V. Test each piece before use. The 68 Ω driver design stays as is. |
 | 10 | 10 kΩ through-hole resistors, ≥0.25 W | Not in cart; both checked Robu wattage variants unavailable at final check. Intended for defined idle states. |
 | 2 | Enclosed USB power adapters, 5 V-class output, ≥2 A each | **Explicitly excluded by user.** Availability of suitable existing adapters has not been confirmed. USB data cables remained included. |
 | 1 | Flame-retardant electrical enclosure, roughly 200 × 150 × 80 mm with mounting provision | Not sourced; final size depends on actual layout, heat and mains/logic separation. |
