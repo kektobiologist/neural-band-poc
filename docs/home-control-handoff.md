@@ -45,8 +45,25 @@ These are historical listing observations from this conversation, not purchase a
 | Xenbrix AC Dimmer V2 | [Amazon B0HBKKW7BT](https://www.amazon.in/dp/B0HBKKW7BT); observed ₹349, in stock; seller advertised 110–230 VAC, 3 A/600 W, 2.8–5.5 V control and induction-fan support | Candidate only; seller claims do not establish isolation, motor rating, or exact ESP32 interface. Obtain schematic/pinout/library and verify before selecting |
 | Four-channel AC dimmer module | [Robu listing](https://robu.in/product/ac-light-lamp-dimming-led-lamp-and-motor-dimmer-module-4-channel/); SKU 890179; observed ₹1,789, out of stock; BTA16-600B and RBDdimmer mentioned | Candidate only; listing had inconsistent channel/voltage descriptions. Not a verified ready-to-install fan regulator |
 | G3MB-202P SSR modules | [Datasheet hosted by Robu](https://robu.in/wp-content/uploads/2017/04/g3mb-ssr-datasheet-1.pdf) | Investigated as an SSR family, **not selected**. Do not treat a generic “2 A” module as verified for LED inrush or ceiling-fan control |
+| CentIoT 5 mm 940 nm IR emitter + photodiode pairs (5+5) | [Amazon B071NK3KD4](https://www.amazon.in/dp/B071NK3KD4); observed ₹229, in stock; listed Vf 1.2–1.4 V, 940 nm, no datasheet; a few reviews report a dead piece | **Ordered 2026-10-06**, expected 2026-10-08. Run emitters at ~20 mA continuous (the listed 100 mA is a pulsed/peak figure). Test each piece before use (Vf plus front-phone-camera check). The black-lens photodiode is a raw detector, not a 38 kHz demodulating receiver; it does not replace a TSOP/VS1838B for capturing remote codes |
 
-No fully verified off-the-shelf solid-state lighting assembly or fan regulator has been selected. No final complete BOM exists. Still need to select ESP32 boards, isolated power supplies, suitable IR emitter/driver (and optionally receiver for learning/verification), enclosures, terminals, protection and installation accessories. Do not let a cheap listing's wattage alone determine suitability.
+No fully verified off-the-shelf solid-state lighting assembly or fan regulator has been selected. No final complete BOM exists. Still need to select ESP32 boards, isolated power supplies, an IR LED driver transistor and a 38 kHz receiver module (VS1838B/TSOP1738) for capture and verification, enclosures, terminals, protection and installation accessories. Do not let a cheap listing's wattage alone determine suitability.
+
+### Robu order reconciled (2026-10-06)
+
+Robu order #3738222, placed 2026-10-03, status Completed: 25 paid lines, ₹5,091.78 subtotal, ₹193.40 Bluedart shipping, ₹5,285.18 total. Every line and quantity matches the cart table in [home-control-bom.md](home-control-bom.md); nothing was dropped or substituted at checkout. The two free Murata capacitor lines appear as expected. The BOM's "missing" TSAL6200 emitter row is superseded by the CentIoT 940 nm order above.
+
+### Samsung AC IR: use the existing library, do not reverse-engineer from scratch
+
+The remote (photo on 2026-10-06) is a current-generation Samsung AC remote: Power, Mode, Temp ±, swing, Fast, Fan, Timer, Options/Clean, SET/°C↔°F. Battery cover label (photo 2026-10-06): **DB96-25318J**, SAMJIN, date code 230207. Replacement listings pair it with DB96-25318F/G and DB96-24901B, and the library already lists DB96-24901C as a confirmed remote, so the protocol match is strong. This family uses the Samsung AC protocol already implemented in [IRremoteESP8266](https://github.com/crankyoldgit/IRremoteESP8266) (`IRSamsungAc`, [ir_Samsung.h](https://github.com/crankyoldgit/IRremoteESP8266/blob/master/src/ir_Samsung.h)): 38 kHz carrier, 21-byte extended frames in three 7-byte sections with per-section checksums, full-state (power, mode, temp, fan, swing) per transmission. Confirmed units in the [supported list](https://github.com/crankyoldgit/IRremoteESP8266/blob/master/SupportedProtocols.md) include AR09HSFSBWKN, AR12TXEAAWKNEU, remotes DB93-14195A and DB63-03556X003. Protocol background: [issue 1538](https://github.com/crankyoldgit/IRremoteESP8266/issues/1538).
+
+Plan:
+
+1. Capture first, no emitter needed: VS1838B/TSOP1738 receiver module on an ESP32 running the library's `IRrecvDumpV2` example. Press each remote button and confirm it decodes as `SAMSUNG_AC` with a 21-byte state. This pins the variant and gives reference frames for every button.
+2. Transmit with `IRSamsungAc` once the 940 nm emitters arrive. Transmit stage: GPIO → 1 kΩ → base of any NPN (BC547/2N2222/S8050), emitter to GND, LED + series resistor from 5 V to collector. Start with ~235 Ω (two 470 Ω in parallel, ~16 mA). A single 5 mm LED at that current reaches roughly 2–3 m; if the AC is further, drop to ~100 Ω (pulsed ~35 mA, fine under 38 kHz modulation) or parallel a second LED. Do not drive the LED straight from a GPIO.
+3. Verify by pointing the ESP32 at the receiver and checking the sent frame round-trips, then at the AC.
+
+If the AC ignores library frames, compare captured versus generated bytes before assuming a new protocol; the 14-byte legacy variant exists but newer units use the 21-byte one.
 
 Useful primary technical references:
 
