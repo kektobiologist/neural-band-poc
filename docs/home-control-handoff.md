@@ -1,10 +1,16 @@
-# Home-control prototype handoff — 2026-10-01
+# Home-control prototype handoff — updated 2026-10-06
+
+## Start here: procurement and next task
+
+Read [the BOM and perfboard-design handoff](home-control-bom.md) first. The user confirmed a Robu order on 2026-10-03 after the agent prepared a cart of 25 paid product lines (₹5,091.78 including GST). This is a cart record, not an independently checked final invoice; reconcile delivered parts before layout. The user now wants to continue with another agent to design the prototype perfboards and test them. No hardware tests or perfboard design were completed in this conversation.
+
+The selected architecture is **two ESP32-S3 N16R8 boards**, using ESP-NOW between the fan/light and AC nodes. The RF-only receiver proposal was abandoned. The selected fan module is Robu's single-channel 8 A AC dimmer; the A03B SSR is a provisional LED-tube test component. USB-C power adapters were explicitly excluded from the order. Missing items and detailed interface caveats are in the BOM.
 
 ## Goal and user preferences
 
 Use the neural band's recognized gestures to control the user's room appliances with minimal delay after recognition:
 
-- Tubelight: on/off. Exact LED driver or fluorescent ballast is not yet known.
+- Tubelight: on/off. User confirmed LED, approximately 20–40 W; exact driver remains unknown.
 - Conventional 230 V AC ceiling fan in India, currently using a wall regulator: on/off and speed.
 - Samsung AC with an IR remote: on/off and temperature. Exact AC/remote model remains unknown.
 
@@ -19,7 +25,7 @@ The user intends to use two ESP32 devices because the AC and fan/light controls 
 1. ESP32 #1: receive band events, run the gesture/control state machine, and drive local fan/light control interfaces.
 2. ESP32 #2: sit near the AC and transmit Samsung-compatible IR, receiving commands from #1 over ESP-NOW.
 
-ESP32-S3 was discussed as a candidate. **Direct band connectivity on ESP32 is not established.** BLE L2CAP CoC support in a platform SDK is only a prerequisite; the existing band transport, owner authentication, encryption, and streaming protocol still need porting and hardware validation. Do this feasibility test before treating the two-board architecture as settled. A dedicated Linux SBC remains a fallback connector if the ESP32 port proves unsuitable; the Mac is the current development host only.
+ESP32-S3 N16R8 development boards were selected for both nodes. The band-receiving node assignment above is provisional. **Direct band connectivity on ESP32 is not established.** BLE L2CAP CoC support in a platform SDK is only a prerequisite; the existing band transport, owner authentication, encryption, and streaming protocol still need porting and hardware validation. Appliance-node prototyping can proceed with synthetic commands or the existing Mac bridge. A dedicated Linux SBC remains a fallback connector if the ESP32 port proves unsuitable; the final Mac-independent band path is not settled.
 
 No measured end-to-end latency budget exists yet. Do not promise zero radio latency. Measure recognition-event receipt, command dispatch, output activation, and acknowledgement separately. IR transmission and an appliance's internal response are distinct from MCU dispatch time; fan mechanical speed changes and AC compressor delays are not switching latency.
 
@@ -27,15 +33,15 @@ No measured end-to-end latency budget exists yet. Do not promise zero radio late
 
 | Appliance | Proposed output | Remaining verification |
 | --- | --- | --- |
-| Tubelight | Optically isolated, zero-cross AC solid-state relay (SSR), with an ESP32-compatible input/interface | Actual lamp/driver type, inrush rating, minimum load, off-state leakage, thermal requirements, enclosure and protection |
-| Conventional fan | Isolated, motor-rated TRIAC phase-angle speed controller with zero-cross sensing | Explicit compatibility with this fan, documented control interface and isolation, reliable startup/minimum speed, motor hum and thermal behavior |
+| LED tubelight | A03B 5 V single-channel AC SSR module, provisional test part | Conflicting seller trigger descriptions; actual isolation, input interface, driver inrush, minimum load, leakage, thermal behaviour and protection |
+| Conventional fan | Selected Robu single-channel 8 A dimmer with zero-cross sensing and MCU-timed triggering | Actual board revision/pinout, output logic levels, isolation, ESP32-S3 firmware support, fan compatibility, startup/minimum speed, hum and thermal behaviour |
 | Samsung AC | IR transmitter driven by the second ESP32 | Model/protocol variant, full-state frame format, emitter coverage and library support |
 
 Optocouplers themselves are not the mechanical/noisy component; optical isolation remains desirable. Removing the relay coil and contacts removes coil flyback and contact arcing from that relay, but does not eliminate all load-related EMI. The user's interference has not been diagnosed: supply dips, shared ground/power paths, contact transients and radiated coupling are possibilities. Do not assert that airborne coil coupling is the cause without measurements.
 
 A zero-cross SSR waits for the next voltage zero crossing: approximately 0–10 ms at 50 Hz. This is a small, bounded switching contribution, not a measured total system latency. A normal on/off zero-cross SSR is **not** a fan speed regulator; do not apply ordinary ESP32 PWM or heater-style burst control to it for this purpose. Phase-angle fan control removes relay clicks but may produce motor hum. SSRs dissipate heat, leak some current while off, and are not a physical mains disconnect. Use an enclosed, appropriately protected assembly and retain a physical disconnect; mains installation needs a qualified electrician.
 
-## Shopping research so far
+## Historical shopping research (superseded by the BOM)
 
 These are historical listing observations from this conversation, not purchase approvals, certifications, or guaranteed current prices/stock. Recheck before ordering.
 
@@ -46,7 +52,7 @@ These are historical listing observations from this conversation, not purchase a
 | Four-channel AC dimmer module | [Robu listing](https://robu.in/product/ac-light-lamp-dimming-led-lamp-and-motor-dimmer-module-4-channel/); SKU 890179; observed ₹1,789, out of stock; BTA16-600B and RBDdimmer mentioned | Candidate only; listing had inconsistent channel/voltage descriptions. Not a verified ready-to-install fan regulator |
 | G3MB-202P SSR modules | [Datasheet hosted by Robu](https://robu.in/wp-content/uploads/2017/04/g3mb-ssr-datasheet-1.pdf) | Investigated as an SSR family, **not selected**. Do not treat a generic “2 A” module as verified for LED inrush or ceiling-fan control |
 
-No fully verified off-the-shelf solid-state lighting assembly or fan regulator has been selected. No final complete BOM exists. Still need to select ESP32 boards, isolated power supplies, suitable IR emitter/driver (and optionally receiver for learning/verification), enclosures, terminals, protection and installation accessories. Do not let a cheap listing's wattage alone determine suitability.
+A selected-parts/cart BOM now exists in [home-control-bom.md](home-control-bom.md), and the user confirmed ordering. The historical candidates above are not the current shopping list. The selected dimmer and SSR still require hardware/load validation; procurement does not establish electrical suitability or successful operation.
 
 Useful primary technical references:
 
@@ -118,9 +124,9 @@ The user's real-world observation that swipes work is stronger evidence than mer
 
 ## Suggested continuation
 
-1. Confirm the exact tubelight/driver and fan label, and Samsung AC/remote model, before final component selection.
-2. Find solid-state parts on Amazon India, falling back to Robu. Verify manufacturer documentation, load compatibility, isolation, control voltage/current and thermal requirements. Label unresolved candidates honestly.
-3. Prove band connectivity/authentication on the chosen dedicated controller before buying around an assumed ESP32-only design.
-4. Implement and test the gesture state machine with simulated outputs, then validate timing and interference on the enclosed hardware. No household-output firmware or mains hardware was built in this conversation.
+1. Reconcile the BOM against the actual invoice/delivered parts and identify the missing components. Confirm fan, LED driver and Samsung AC/remote models.
+2. Follow the BOM's design handoff: verify actual board interfaces, draw the two low-voltage schematics and GPIO maps, then create dimensioned perfboard layouts. Resolve power distribution and boot/output states before wiring.
+3. Execute the staged low-voltage, communications, IR and protected load tests in the BOM. Record evidence and failures. Household-output firmware and mains hardware were not built in this conversation.
+4. Separately prove band connectivity/authentication on ESP32 and implement the gesture state machine. Preserve the existing owner identity strategy; do not equate selecting an ESP32 board with a working band port.
 
-This file records discussion and research. The documentation commit does not change the server, band firmware, authentication implementation, or appliance control behavior.
+This file records discussion, procurement context and intended work. This documentation update does not change the server, band firmware, authentication implementation, or appliance control behaviour.
