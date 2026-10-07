@@ -1,0 +1,8 @@
+menu "Neural band"
+    config BAND_OWNER_AUTH
+        bool "Use an already enrolled owner identity"
+        default n
+        help
+            Enable only when owner_identity.h contains the key currently enrolled
+            on the band. With this disabled, use an unpaired band in pairing mode.
+endmenu

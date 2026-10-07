@@ -1,4 +1,30 @@
-# Home-control prototype handoff — updated 2026-10-06
+# Home-control prototype handoff — updated 2026-10-07
+
+## Band connection recovery — 2026-10-07
+
+After re-pairing the band with Meta on the rooted OnePlus, the current owner key
+was recovered locally and verified on the Mac: owner accepted, 29 gesture
+messages, 22,284 motion messages, and clean stream shutdown. This replaces the
+stale key that was rejected with `0x03001043`. No new enrollment ceremony was
+performed by the Mac helper; the attempted Meta sign-in helper was not needed.
+
+The key was provisioned into the standalone ESP32-S3 firmware. Hardware now
+reports owner authentication accepted and `GESTURES READY`, with a successful
+input subscription acknowledgement, followed by 39 physical gesture messages
+over USB serial. The user also confirmed it works in Arduino Serial Monitor.
+BLE/L2CAP and AirShield TX 27 / RX 26 work.
+See [the firmware README](../firmware/band-probe/README.md) for gesture-event
+verification and Arduino Serial Monitor instructions. Appliance control remains
+unimplemented.
+
+Re-pairing invalidated the old Bluetooth bonds. The Mac's stale band record was
+forgotten; the ESP32's NVS partition was cleared before a fresh bond. The phone's
+Meta pairing remains intact; Meta is force-stopped and phone Bluetooth is off.
+Do not unpair in Meta after recovering an owner key. The Mac's current identifier
+is `3D2967E8-A095-F778-846A-7C41428BA1B1`; dashboard selection and identity mapping
+were updated on disk. Local private PEM and traces are under the ignored
+`captures/oneplus/repaired-20261007/` directory. The old PEM is preserved for
+historical reference and is no longer the working identity.
 
 ## Start here: procurement and next task
 
@@ -25,7 +51,7 @@ The user intends to use two ESP32 devices because the AC and fan/light controls 
 1. ESP32 #1: receive band events, run the gesture/control state machine, and drive local fan/light control interfaces.
 2. ESP32 #2: sit near the AC and transmit Samsung-compatible IR, receiving commands from #1 over ESP-NOW.
 
-ESP32-S3 N16R8 development boards were selected for both nodes. The band-receiving node assignment above is provisional. **Direct band connectivity on ESP32 is not established.** BLE L2CAP CoC support in a platform SDK is only a prerequisite; the existing band transport, owner authentication, encryption, and streaming protocol still need porting and hardware validation. Appliance-node prototyping can proceed with synthetic commands or the existing Mac bridge. A dedicated Linux SBC remains a fallback connector if the ESP32 port proves unsuitable; the final Mac-independent band path is not settled.
+ESP32-S3 N16R8 development boards were selected for both nodes. The band-receiving node assignment above is provisional. **Direct BLE/L2CAP connectivity and initial-message exchange on ESP32-S3 are now verified.** The standalone band client now completes owner authentication and gesture subscription; see the current firmware README for physical gesture evidence. Appliance-node prototyping can proceed with synthetic commands or the existing Mac bridge. Standalone gesture reception no longer requires the Mac; the appliance-control integration remains to be built.
 
 No measured end-to-end latency budget exists yet. Do not promise zero radio latency. Measure recognition-event receipt, command dispatch, output activation, and acknowledgement separately. IR transmission and an appliance's internal response are distinct from MCU dispatch time; fan mechanical speed changes and AC compressor delays are not switching latency.
 
@@ -132,7 +158,7 @@ Local ignored artifacts relevant to resuming:
 
 - `captures/dashboard-selected-band.json`: selected band (previously Meta Band 00Z9).
 - `captures/dashboard-identities.json`: mapping of band identifier to owner identity path.
-- `captures/oneplus/paired-session/band-owner-identity.pem`: previously used owner identity. **Private key: never print its contents, commit it, or copy it into documentation.**
+- `captures/oneplus/repaired-20261007/owner-candidate-1.pem`: current verified owner identity; the older paired-session PEM is stale. **Private key: never print its contents, commit it, or copy it into documentation.**
 - `captures/mac-band-probe-dashboard-20260930T171050089594.jsonl`: trace examined earlier. Reported 119 non-synthetic raw swipes (26 left, 37 right, 38 down, 18 up), each with a derived equivalent, plus four thumb click events. These are prior trace observations, not a new verification during this documentation update.
 
 The user's real-world observation that swipes work is stronger evidence than merely seeing their enum values. Enum support does not prove every gesture is physically available. Consult `instrumentation/input_service.py`, [gesture notes](gestures.md), [gesture model notes](gesture-models.md), [trust handshake](trust-handshake.md), and [findings](findings.md) for protocol details. This session did not establish table-writing/handwriting recognition as an accessible band feature.
