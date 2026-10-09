@@ -1,5 +1,8 @@
 /* Standalone BLE/L2CAP band gesture monitor. No appliance GPIOs. */
 #include "band_protocol.h"
+#include "driver/usb_serial_jtag.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_random.h"
 #include "esp_system.h"
@@ -10,6 +13,7 @@
 #include "nimble/nimble_port_freertos.h"
 #include "nvs_flash.h"
 #include <stdio.h>
+#include <ctype.h>
 #include <string.h>
 
 #define MTU 512
@@ -30,6 +34,103 @@ static struct ble_npl_callout retry;
 static bool tx_stalled;
 static unsigned handshake_ticks;
 static uint16_t peer_mtu;
+static struct ble_npl_event battery_event;
+static bool battery_pending, battery_received;
+
+// All GATT and connection state is accessed on the NimBLE host task.
+static int battery_read(uint16_t conn, const struct ble_gatt_error *error,
+                        struct ble_gatt_attr *attr, void *arg) {
+    if (conn != connection)
+        return 0;
+    if (error->status) {
+        battery_pending = false;
+        if (error->status == BLE_HS_EDONE) {
+            if (!battery_received)
+                ESP_LOGW(TAG, "BATTERY unavailable: characteristic not found");
+        } else {
+            ESP_LOGW(TAG, "BATTERY read failed status=%d; try again", error->status);
+        }
+        return 0;
+    }
+    uint8_t percent;
+    if (!attr || OS_MBUF_PKTLEN(attr->om) != 1 ||
+        os_mbuf_copydata(attr->om, 0, 1, &percent) || percent > 100) {
+        battery_pending = false;
+        ESP_LOGW(TAG, "BATTERY invalid response");
+        return BLE_HS_EAPP;
+    }
+    battery_received = true;
+    ESP_LOGI(TAG, "BATTERY %u%% (fresh band reading)", percent);
+    return 0;
+}
+
+static void request_battery(struct ble_npl_event *event) {
+    if (connection == BLE_HS_CONN_HANDLE_NONE) {
+        ESP_LOGW(TAG, "BATTERY unavailable: band not connected");
+        return;
+    }
+    if (!band_protocol_streaming()) {
+        ESP_LOGW(TAG, "BATTERY wait for GESTURES READY, then try again");
+        return;
+    }
+    if (battery_pending) {
+        ESP_LOGI(TAG, "BATTERY read already pending");
+        return;
+    }
+    const ble_uuid16_t uuid = BLE_UUID16_INIT(0x2a19);
+    battery_received = false;
+    battery_pending = true;
+    int rc = ble_gattc_read_by_uuid(connection, 1, 0xffff, &uuid.u, battery_read, NULL);
+    if (rc) {
+        battery_pending = false;
+        ESP_LOGW(TAG, "BATTERY read could not start rc=%d; try again", rc);
+    }
+}
+
+static void serial_command(char *line) {
+    while (isspace((unsigned char)*line))
+        line++;
+    size_t len = strlen(line);
+    while (len && isspace((unsigned char)line[len - 1]))
+        line[--len] = '\0';
+    for (size_t i = 0; i < len; i++)
+        line[i] = (char)tolower((unsigned char)line[i]);
+    if (!strcmp(line, "battery"))
+        ble_npl_eventq_put(nimble_port_get_dflt_eventq(), &battery_event);
+    else if (len)
+        ESP_LOGI(TAG, "Commands: battery (fresh percentage), help");
+}
+
+static void serial_task(void *arg) {
+    char line[64];
+    size_t used = 0;
+    bool overflow = false;
+    for (;;) {
+        uint8_t c;
+        int n = usb_serial_jtag_read_bytes(&c, 1, pdMS_TO_TICKS(300));
+        // Idle completion also supports Arduino's "No line ending" option.
+        if (n <= 0 || c == '\r' || c == '\n') {
+            if (overflow)
+                ESP_LOGW(TAG, "Command too long; type battery or help");
+            else if (used) {
+                line[used] = '\0';
+                serial_command(line);
+            }
+            used = 0;
+            overflow = false;
+        } else if (!overflow) {
+            if (c == '\b' || c == 127) {
+                if (used)
+                    used--;
+            } else if (c >= 32 && c <= 126) {
+                if (used < sizeof(line) - 1)
+                    line[used++] = (char)c;
+                else
+                    overflow = true;
+            }
+        }
+    }
+}
 #define TX_COUNT 16
 static struct {
     uint8_t data[512];
@@ -304,6 +405,7 @@ static int gap_event(struct ble_gap_event *event, void *arg) {
     case BLE_GAP_EVENT_DISCONNECT:
         ESP_LOGI(TAG, "BLE_DISCONNECTED reason=%d", event->disconnect.reason);
         connection = BLE_HS_CONN_HANDLE_NONE;
+        battery_pending = battery_received = false;
         ble_npl_callout_stop(&deadline);
         channel = NULL;
         tx_count = tx_head = 0;
@@ -353,6 +455,8 @@ void app_main(void) {
     assert(os_mbuf_pool_init(&mbuf_pool, &mempool, BLOCK_SIZE, BLOCK_COUNT) == 0);
     esp_log_level_set("NimBLE", ESP_LOG_WARN);
     ESP_ERROR_CHECK(nimble_port_init());
+    usb_serial_jtag_driver_config_t usb_config = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(usb_serial_jtag_driver_install(&usb_config));
     ble_hs_cfg.sm_io_cap = BLE_HS_IO_NO_INPUT_OUTPUT;
     ble_hs_cfg.sm_bonding = 1;
     ble_hs_cfg.sm_sc = 1;
@@ -363,5 +467,8 @@ void app_main(void) {
     ble_hs_cfg.reset_cb = reset_host;
     ble_npl_callout_init(&deadline, nimble_port_get_dflt_eventq(), finish, NULL);
     ble_npl_callout_init(&retry, nimble_port_get_dflt_eventq(), retry_scan, NULL);
+    ble_npl_event_init(&battery_event, request_battery, NULL);
     nimble_port_freertos_init(host_task);
+    assert(xTaskCreate(serial_task, "serial_commands", 3072, NULL, 3, NULL) == pdPASS);
+    ESP_LOGI(TAG, "Serial commands: battery, help (115200 baud; any line ending)");
 }

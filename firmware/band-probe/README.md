@@ -63,6 +63,28 @@ trigger a fresh scan and handshake. Connection setup has a 45-second timeout;
 streaming itself has no preset duration. Close other serial monitors before
 flashing or capturing.
 
+## Serial commands
+
+Type `battery` in Arduino Serial Monitor and press Send. Wait for
+`GESTURES READY` first. The ESP32 reads the band's standard Battery Level
+characteristic (`0x2a19`) over the existing GATT connection and prints, for
+example:
+
+```text
+BATTERY 77% (fresh band reading)
+```
+
+This is a new read for each command, not a cached estimate. It does not restart
+the gesture stream. `help` lists commands. Commands ignore case and surrounding
+spaces; Newline, Carriage return, Both NL & CR, and No line ending are supported.
+With no line ending, a 300 ms input pause completes the command. Commands longer
+than 63 characters are discarded. While disconnected or still authenticating,
+`battery` reports that state; send it again once ready.
+
+Hardware validation on 2026-10-09 returned 77% through the serial command while
+streaming remained active. This is a historical reading, not a current battery
+estimate. The local test log is `captures/esp32-battery-20261009.log`.
+
 ## Build and provision
 
 Run from the repository root. Python 3.12, PlatformIO 6.2.0, PlatformIO

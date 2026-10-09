@@ -1,4 +1,14 @@
-# Home-control prototype handoff — updated 2026-10-07
+# Home-control prototype handoff — updated 2026-10-09
+
+## Serial battery command — 2026-10-09
+
+The ESP32 firmware now accepts `battery` (and `help`) over USB Serial Monitor at
+115200 baud. Each request reads GATT Battery Level `0x2a19` without interrupting
+the gesture subscription. Case, surrounding spaces, and all Arduino line-ending
+options are accepted; no-line-ending commands complete after 300 ms idle.
+The updated firmware was built and flashed. A live hardware query returned 77%
+on October 9; use the command for a fresh reading. See the firmware README for
+usage and the ignored `captures/esp32-battery-20261009.log` for validation.
 
 ## Band connection recovery — 2026-10-07
 
