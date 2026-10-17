@@ -4,7 +4,16 @@ Standalone BLE/L2CAP, AirShield encryption, enrolled-owner authentication, and
 gesture decoding for the neural band. The ESP32 runs the protocol; no Mac
 Bluetooth connection or Python bridge is required during normal operation.
 
-## Current hardware status — 2026-10-07
+## Combined AC test — 2026-10-17
+
+The connected board now runs the `band-ac` environment. Index double-tap turns
+the AC on, middle double-tap sends OFF → ON → OFF, and thumb right/left raises
+or lowers temperature. Build, waveform comparison tests, upload, and live band
+authentication passed. The user subsequently confirmed end-to-end operation and the completed
+transmitter-only perfboard build on 2026-10-18. See [AC control](AC_CONTROL.md) for commands
+and test instructions. The `esp32-s3` environment retains the BLE-only probe.
+
+## Previous hardware status — 2026-10-07
 
 **Owner authentication and gesture subscription now succeed on ESP32-S3.**
 After re-pairing the band in Meta on the rooted OnePlus, a new enrolled signing
@@ -153,8 +162,9 @@ these addresses are not a general recipe for other firmware. NVS erasure also
 removes other data in that partition. The original full flash backup is noted
 above. Do not factory-reset or unpair the band to fix a host's stale bond.
 
-The current firmware is a serial diagnostic. Next work is the appliance gesture
-state machine and ESP-NOW/IR/output integration. Raw and derived events can
+The original `esp32-s3` environment is a serial diagnostic. The `band-ac`
+environment now adds AC-only gesture mapping and IR; broader appliance and
+ESP-NOW integration remains future work. Raw and derived events can
 represent the same physical gesture; deduplicate them and ignore synthetic
 cleanup events before triggering appliance actions. No appliance GPIOs or
 latency claims have been validated by this test.

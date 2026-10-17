@@ -1,5 +1,8 @@
-/* Standalone BLE/L2CAP band gesture monitor. No appliance GPIOs. */
+/* BLE/L2CAP band client; optional BAND_AC_CONTROL adds GPIO4 IR output. */
 #include "band_protocol.h"
+#ifdef BAND_AC_CONTROL
+#include "ac_control.h"
+#endif
 #include "driver/usb_serial_jtag.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -97,6 +100,10 @@ static void serial_command(char *line) {
         line[i] = (char)tolower((unsigned char)line[i]);
     if (!strcmp(line, "battery"))
         ble_npl_eventq_put(nimble_port_get_dflt_eventq(), &battery_event);
+#ifdef BAND_AC_CONTROL
+    else if (ac_control_command(line))
+        return;
+#endif
     else if (len)
         ESP_LOGI(TAG, "Commands: battery (fresh percentage), help");
 }
@@ -451,6 +458,9 @@ static void host_task(void *param) {
 void app_main(void) {
     ESP_LOGI(TAG, "BAND GESTURE MONITOR: connect -> authenticate -> live gestures at 115200 baud");
     ESP_ERROR_CHECK(nvs_flash_init());
+#ifdef BAND_AC_CONTROL
+    ac_control_init();
+#endif
     assert(os_mempool_init(&mempool, BLOCK_COUNT, BLOCK_SIZE, pool_memory, "coc") == 0);
     assert(os_mbuf_pool_init(&mbuf_pool, &mempool, BLOCK_SIZE, BLOCK_COUNT) == 0);
     esp_log_level_set("NimBLE", ESP_LOG_WARN);

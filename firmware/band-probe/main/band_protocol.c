@@ -32,6 +32,8 @@
 #define CHANNEL_CAP 64
 #define FRAME_CAP 512
 static const char *TAG = "band";
+static band_gesture_fn gesture_handler;
+void band_protocol_set_gesture_handler(band_gesture_fn handler) { gesture_handler = handler; }
 static struct {
     bool initialized, failed, peer_request, encrypted, owner_ok, peer_setup, peer_proof, started, streaming;
     const char *error;
@@ -511,6 +513,14 @@ static bool datax_frame(const uint8_t *data, size_t len) {
         ESP_LOGI(TAG, "GESTURE seq=%" PRIu64 " finger=%s action=%s derived=%s synthetic=%u band_us=%" PRIu64,
                  f[1].value, named(scalar(f[3], 0), fingers, 5, a), named(scalar(f[4], 0), actions, 21, b),
                  named(scalar(f[5], 0), derived, 11, c), (unsigned)(scalar(f[12], 0) != 0), f[2].value);
+        if (s.streaming && gesture_handler) {
+            const band_gesture_t event = {
+                .sequence = f[1].value, .timestamp_us = f[2].value,
+                .finger = scalar(f[3], 0), .action = scalar(f[4], 0),
+                .derived = scalar(f[5], 0), .synthetic = scalar(f[12], 0) != 0,
+            };
+            gesture_handler(&event);
+        }
     }
     return start_input();
 }

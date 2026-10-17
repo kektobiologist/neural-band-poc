@@ -2,6 +2,15 @@
 
 Updated: 2026-10-06. Related context: [home-control handoff](home-control-handoff.md).
 
+2026-10-09 AC bench implementation: see the [standalone IR test and breadboard
+wiring guide](../firmware/ac-ir-test/README.md). For the undocumented kit LED,
+as updated 2026-10-17, that test uses **one 220 Ω resistor (≥0.25 W)** and a **10 kΩ
+base–emitter pull-down** from the user’s existing resistor stock (confirmed
+2026-10-09). A VS1838B on GPIO5/3V3 supports remote capture and opt-in emitter
+loopback. This supersedes
+the single-68 Ω / missing-10 kΩ proposal below for initial testing. Hardware
+operation and range remain unverified.
+
 ## Status and evidence
 
 The user confirmed the Robu order was placed on 2026-10-03. The table below records the **last agent-verified cart before checkout**, see the redacted order record [robu-order-3738222-redacted.pdf](robu-order-3738222-redacted.pdf), which matches it line for line: the user intended to filter items before buying, so reconcile quantities against the delivered parts/invoice before laying out boards. Delivery and physical inspection have not been confirmed. No hardware assembly or tests were performed in this conversation.
@@ -58,8 +67,8 @@ Robu also automatically included free parts: 3 × Murata DSS1NB32A101Q91A 100 pF
 
 | Qty | Part | Status |
 | ---: | --- | --- |
-| 5 | 5 mm 940 nm IR emitters (CentIoT kit, [Amazon B071NK3KD4](https://www.amazon.in/dp/B071NK3KD4), with 5 photodiodes) | **Ordered 2026-10-06** in place of the TSAL6200. No datasheet; listed Vf 1.2–1.4 V. Test each piece before use. The 68 Ω driver design stays as is. |
-| 10 | 10 kΩ through-hole resistors, ≥0.25 W | Not in cart; both checked Robu wattage variants unavailable at final check. Intended for defined idle states. |
+| 5 | 5 mm 940 nm IR emitters (CentIoT kit, [Amazon B071NK3KD4](https://www.amazon.in/dp/B071NK3KD4), with 5 photodiodes) | **Ordered 2026-10-06** in place of the TSAL6200. No datasheet; listed Vf 1.2–1.4 V. Test each piece before use. Initial bench design now uses 220 Ω; see linked test guide. |
+| 10 | 10 kΩ through-hole resistors, ≥0.25 W | Not in cart; both checked Robu wattage variants unavailable at final check. Intended for defined idle states. **2026-10-09: user confirmed existing 10 kΩ stock; no purchase needed for this test.** |
 | 2 | Enclosed USB power adapters, 5 V-class output, ≥2 A each | **Explicitly excluded by user.** Availability of suitable existing adapters has not been confirmed. USB data cables remained included. |
 | 1 | Flame-retardant electrical enclosure, roughly 200 × 150 × 80 mm with mounting provision | Not sourced; final size depends on actual layout, heat and mains/logic separation. |
 | 1 | Low-voltage AC-node enclosure, roughly 100 × 70 × 40 mm | Not sourced; size is provisional; provide an IR opening/window suitable for 940 nm. |

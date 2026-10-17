@@ -1,4 +1,56 @@
-# Home-control prototype handoff — updated 2026-10-09
+# Home-control prototype handoff — updated 2026-10-18
+
+## Combined band → AC test — 2026-10-17
+
+The connected board now runs `firmware/band-probe` environment `band-ac`.
+User selected index double-tap ON, middle double-tap OFF → ON → OFF, and thumb
+right/left warmer/cooler. GPIO4 hardware RMT emits Samsung frames; BLE work is
+kept separate from the IR task. All 60 frame/timing comparisons against the
+working IR library passed, as did mapping tests, build, upload, and live BLE
+owner authentication/subscription. No gestures arrived during the initial
+100-second capture. The user subsequently confirmed end-to-end operation and,
+on 2026-10-18, the completed transmitter-only perfboard build. The ESP32 sits
+in two female-header rows on the same 5 × 7 cm isolated-pad board; the circuit
+uses 270 Ω / 470 Ω / 10 kΩ resistors and a 100 µF supply capacitor.
+See [combined AC instructions](../firmware/band-probe/AC_CONTROL.md).
+Local evidence: `captures/band-ac-first-20261017.log`.
+
+## Bluetooth isolation retest — 2026-10-17
+
+User confirmed the OFF → ON → OFF AC sequence works, then requested Bluetooth
+isolation testing before integration. Restored the existing October 9 band-probe
+build on `/dev/cu.usbmodem1101` without an NVS erase or new identity provisioning.
+Live logs confirm encrypted/bonded BLE, L2CAP, AirShield, owner authentication
+accepted, and `GESTURES READY`. A fresh battery query returned 100%.
+That isolation run used Bluetooth-only firmware. Local evidence:
+`captures/band-retest-20261017.log`. It has since been replaced by the combined build above.
+
+## AC firmware flashed — 2026-10-17
+
+User explicitly authorized reusing the connected band board. Standalone
+`firmware/ac-ir-test` was uploaded on `/dev/cu.usbmodem1101`, replacing the band
+application; upload hashes and live help/status/receiver enable-disable verified.
+User subsequently confirmed ON and temperature control work, but the legacy OFF
+frame failed. Revised OFF uses `sendExtended()` with power false; the previous
+frame remains available as `off legacy`. Revision uploaded and live help verified;
+User confirmed revised OFF works, but starts a cleaning cycle. At their request,
+`off` now sends OFF → ON → OFF with 1-second gaps; `off single` preserves the
+single extended frame. Sequence revision uploaded and live help verified;
+the user subsequently confirmed the physical sequence works. No IR was sent by the agent.
+Full backup was cancelled at user request. Band source remains available.
+See `captures/ac-ir-flash-20261017.log` for local serial evidence.
+
+## Standalone AC IR bench test — 2026-10-09
+
+[Firmware and breadboard instructions](../firmware/ac-ir-test/README.md) now
+provide USB commands for Samsung AC on/off and temperature, plus optional
+original-remote capture. Use the second ESP32-S3; band firmware is unchanged.
+GPIO4 drives a PN2222ATA and one IR emitter; GPIO5 is optional receive.
+As updated 2026-10-17, initial LED resistance is one 220 Ω resistor (≥0.25 W), with a
+10 kΩ external base–emitter pull-down from confirmed user stock. VS1838B
+receiver wiring and opt-in `loopback on/off` diagnostics are included. This supersedes
+the historical 50 mA/internal-pull-down proposal below. No hardware test or
+protocol confirmation for the actual AC has yet been performed.
 
 ## Serial battery command — 2026-10-09
 

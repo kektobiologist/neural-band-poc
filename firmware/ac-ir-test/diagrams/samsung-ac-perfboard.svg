@@ -1,0 +1,391 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1180"><rect width="100%" height="100%" fill="white"/>
+<text x="40" y="57.4" font-family="Arial" font-size="36" fill="#203444">IR transmitter • perfboard layout for your placement</text>
+<text x="40" y="96.7" font-family="Arial" font-size="23" fill="#203444">Same orientation as your photo: USB left, ESP32 antenna right, empty strip above.</text>
+<text x="40" y="132.8" font-family="Arial" font-size="22" fill="#203444">NEW coordinates: A = topmost hole row; 1 = leftmost hole. Ignore the board’s printed labels.</text>
+<text x="40" y="169.8" font-family="Arial" font-size="22" fill="#203444">Use the first 18 columns × 7 rows of the empty strip. Dry-fit parts before soldering.</text>
+<text x="50" y="242.5" font-family="Arial" font-size="25" fill="#203444">COMPONENT SIDE • looking down</text>
+<text x="50" y="274.0" font-family="Arial" font-size="20" fill="#203444">Parts go through these holes.</text>
+<rect x="55" y="290" width="585" height="300" fill="#f3dfba"/>
+<text x="30" y="314.2" font-family="Arial" font-size="18" fill="#203444">A</text>
+<text x="30" y="356.2" font-family="Arial" font-size="18" fill="#203444">B</text>
+<text x="30" y="398.2" font-family="Arial" font-size="18" fill="#203444">C</text>
+<text x="30" y="440.2" font-family="Arial" font-size="18" fill="#203444">D</text>
+<text x="30" y="482.2" font-family="Arial" font-size="18" fill="#203444">E</text>
+<text x="30" y="524.2" font-family="Arial" font-size="18" fill="#203444">F</text>
+<text x="30" y="566.2" font-family="Arial" font-size="18" fill="#203444">G</text>
+<text x="67" y="605.4" font-family="Arial" font-size="16" fill="#203444">1</text>
+<circle cx="75" cy="310" r="4" fill="#906e40"/>
+<circle cx="75" cy="352" r="4" fill="#906e40"/>
+<circle cx="75" cy="394" r="4" fill="#906e40"/>
+<circle cx="75" cy="436" r="4" fill="#906e40"/>
+<circle cx="75" cy="478" r="4" fill="#906e40"/>
+<circle cx="75" cy="520" r="4" fill="#906e40"/>
+<circle cx="75" cy="562" r="4" fill="#906e40"/>
+<text x="99" y="605.4" font-family="Arial" font-size="16" fill="#203444">2</text>
+<circle cx="107" cy="310" r="4" fill="#906e40"/>
+<circle cx="107" cy="352" r="4" fill="#906e40"/>
+<circle cx="107" cy="394" r="4" fill="#906e40"/>
+<circle cx="107" cy="436" r="4" fill="#906e40"/>
+<circle cx="107" cy="478" r="4" fill="#906e40"/>
+<circle cx="107" cy="520" r="4" fill="#906e40"/>
+<circle cx="107" cy="562" r="4" fill="#906e40"/>
+<text x="131" y="605.4" font-family="Arial" font-size="16" fill="#203444">3</text>
+<circle cx="139" cy="310" r="4" fill="#906e40"/>
+<circle cx="139" cy="352" r="4" fill="#906e40"/>
+<circle cx="139" cy="394" r="4" fill="#906e40"/>
+<circle cx="139" cy="436" r="4" fill="#906e40"/>
+<circle cx="139" cy="478" r="4" fill="#906e40"/>
+<circle cx="139" cy="520" r="4" fill="#906e40"/>
+<circle cx="139" cy="562" r="4" fill="#906e40"/>
+<text x="163" y="605.4" font-family="Arial" font-size="16" fill="#203444">4</text>
+<circle cx="171" cy="310" r="4" fill="#906e40"/>
+<circle cx="171" cy="352" r="4" fill="#906e40"/>
+<circle cx="171" cy="394" r="4" fill="#906e40"/>
+<circle cx="171" cy="436" r="4" fill="#906e40"/>
+<circle cx="171" cy="478" r="4" fill="#906e40"/>
+<circle cx="171" cy="520" r="4" fill="#906e40"/>
+<circle cx="171" cy="562" r="4" fill="#906e40"/>
+<text x="195" y="605.4" font-family="Arial" font-size="16" fill="#203444">5</text>
+<circle cx="203" cy="310" r="4" fill="#906e40"/>
+<circle cx="203" cy="352" r="4" fill="#906e40"/>
+<circle cx="203" cy="394" r="4" fill="#906e40"/>
+<circle cx="203" cy="436" r="4" fill="#906e40"/>
+<circle cx="203" cy="478" r="4" fill="#906e40"/>
+<circle cx="203" cy="520" r="4" fill="#906e40"/>
+<circle cx="203" cy="562" r="4" fill="#906e40"/>
+<text x="227" y="605.4" font-family="Arial" font-size="16" fill="#203444">6</text>
+<circle cx="235" cy="310" r="4" fill="#906e40"/>
+<circle cx="235" cy="352" r="4" fill="#906e40"/>
+<circle cx="235" cy="394" r="4" fill="#906e40"/>
+<circle cx="235" cy="436" r="4" fill="#906e40"/>
+<circle cx="235" cy="478" r="4" fill="#906e40"/>
+<circle cx="235" cy="520" r="4" fill="#906e40"/>
+<circle cx="235" cy="562" r="4" fill="#906e40"/>
+<text x="259" y="605.4" font-family="Arial" font-size="16" fill="#203444">7</text>
+<circle cx="267" cy="310" r="4" fill="#906e40"/>
+<circle cx="267" cy="352" r="4" fill="#906e40"/>
+<circle cx="267" cy="394" r="4" fill="#906e40"/>
+<circle cx="267" cy="436" r="4" fill="#906e40"/>
+<circle cx="267" cy="478" r="4" fill="#906e40"/>
+<circle cx="267" cy="520" r="4" fill="#906e40"/>
+<circle cx="267" cy="562" r="4" fill="#906e40"/>
+<text x="291" y="605.4" font-family="Arial" font-size="16" fill="#203444">8</text>
+<circle cx="299" cy="310" r="4" fill="#906e40"/>
+<circle cx="299" cy="352" r="4" fill="#906e40"/>
+<circle cx="299" cy="394" r="4" fill="#906e40"/>
+<circle cx="299" cy="436" r="4" fill="#906e40"/>
+<circle cx="299" cy="478" r="4" fill="#906e40"/>
+<circle cx="299" cy="520" r="4" fill="#906e40"/>
+<circle cx="299" cy="562" r="4" fill="#906e40"/>
+<text x="323" y="605.4" font-family="Arial" font-size="16" fill="#203444">9</text>
+<circle cx="331" cy="310" r="4" fill="#906e40"/>
+<circle cx="331" cy="352" r="4" fill="#906e40"/>
+<circle cx="331" cy="394" r="4" fill="#906e40"/>
+<circle cx="331" cy="436" r="4" fill="#906e40"/>
+<circle cx="331" cy="478" r="4" fill="#906e40"/>
+<circle cx="331" cy="520" r="4" fill="#906e40"/>
+<circle cx="331" cy="562" r="4" fill="#906e40"/>
+<text x="355" y="605.4" font-family="Arial" font-size="16" fill="#203444">10</text>
+<circle cx="363" cy="310" r="4" fill="#906e40"/>
+<circle cx="363" cy="352" r="4" fill="#906e40"/>
+<circle cx="363" cy="394" r="4" fill="#906e40"/>
+<circle cx="363" cy="436" r="4" fill="#906e40"/>
+<circle cx="363" cy="478" r="4" fill="#906e40"/>
+<circle cx="363" cy="520" r="4" fill="#906e40"/>
+<circle cx="363" cy="562" r="4" fill="#906e40"/>
+<text x="387" y="605.4" font-family="Arial" font-size="16" fill="#203444">11</text>
+<circle cx="395" cy="310" r="4" fill="#906e40"/>
+<circle cx="395" cy="352" r="4" fill="#906e40"/>
+<circle cx="395" cy="394" r="4" fill="#906e40"/>
+<circle cx="395" cy="436" r="4" fill="#906e40"/>
+<circle cx="395" cy="478" r="4" fill="#906e40"/>
+<circle cx="395" cy="520" r="4" fill="#906e40"/>
+<circle cx="395" cy="562" r="4" fill="#906e40"/>
+<text x="419" y="605.4" font-family="Arial" font-size="16" fill="#203444">12</text>
+<circle cx="427" cy="310" r="4" fill="#906e40"/>
+<circle cx="427" cy="352" r="4" fill="#906e40"/>
+<circle cx="427" cy="394" r="4" fill="#906e40"/>
+<circle cx="427" cy="436" r="4" fill="#906e40"/>
+<circle cx="427" cy="478" r="4" fill="#906e40"/>
+<circle cx="427" cy="520" r="4" fill="#906e40"/>
+<circle cx="427" cy="562" r="4" fill="#906e40"/>
+<text x="451" y="605.4" font-family="Arial" font-size="16" fill="#203444">13</text>
+<circle cx="459" cy="310" r="4" fill="#906e40"/>
+<circle cx="459" cy="352" r="4" fill="#906e40"/>
+<circle cx="459" cy="394" r="4" fill="#906e40"/>
+<circle cx="459" cy="436" r="4" fill="#906e40"/>
+<circle cx="459" cy="478" r="4" fill="#906e40"/>
+<circle cx="459" cy="520" r="4" fill="#906e40"/>
+<circle cx="459" cy="562" r="4" fill="#906e40"/>
+<text x="483" y="605.4" font-family="Arial" font-size="16" fill="#203444">14</text>
+<circle cx="491" cy="310" r="4" fill="#906e40"/>
+<circle cx="491" cy="352" r="4" fill="#906e40"/>
+<circle cx="491" cy="394" r="4" fill="#906e40"/>
+<circle cx="491" cy="436" r="4" fill="#906e40"/>
+<circle cx="491" cy="478" r="4" fill="#906e40"/>
+<circle cx="491" cy="520" r="4" fill="#906e40"/>
+<circle cx="491" cy="562" r="4" fill="#906e40"/>
+<text x="515" y="605.4" font-family="Arial" font-size="16" fill="#203444">15</text>
+<circle cx="523" cy="310" r="4" fill="#906e40"/>
+<circle cx="523" cy="352" r="4" fill="#906e40"/>
+<circle cx="523" cy="394" r="4" fill="#906e40"/>
+<circle cx="523" cy="436" r="4" fill="#906e40"/>
+<circle cx="523" cy="478" r="4" fill="#906e40"/>
+<circle cx="523" cy="520" r="4" fill="#906e40"/>
+<circle cx="523" cy="562" r="4" fill="#906e40"/>
+<text x="547" y="605.4" font-family="Arial" font-size="16" fill="#203444">16</text>
+<circle cx="555" cy="310" r="4" fill="#906e40"/>
+<circle cx="555" cy="352" r="4" fill="#906e40"/>
+<circle cx="555" cy="394" r="4" fill="#906e40"/>
+<circle cx="555" cy="436" r="4" fill="#906e40"/>
+<circle cx="555" cy="478" r="4" fill="#906e40"/>
+<circle cx="555" cy="520" r="4" fill="#906e40"/>
+<circle cx="555" cy="562" r="4" fill="#906e40"/>
+<text x="579" y="605.4" font-family="Arial" font-size="16" fill="#203444">17</text>
+<circle cx="587" cy="310" r="4" fill="#906e40"/>
+<circle cx="587" cy="352" r="4" fill="#906e40"/>
+<circle cx="587" cy="394" r="4" fill="#906e40"/>
+<circle cx="587" cy="436" r="4" fill="#906e40"/>
+<circle cx="587" cy="478" r="4" fill="#906e40"/>
+<circle cx="587" cy="520" r="4" fill="#906e40"/>
+<circle cx="587" cy="562" r="4" fill="#906e40"/>
+<text x="611" y="605.4" font-family="Arial" font-size="16" fill="#203444">18</text>
+<circle cx="619" cy="310" r="4" fill="#906e40"/>
+<circle cx="619" cy="352" r="4" fill="#906e40"/>
+<circle cx="619" cy="394" r="4" fill="#906e40"/>
+<circle cx="619" cy="436" r="4" fill="#906e40"/>
+<circle cx="619" cy="478" r="4" fill="#906e40"/>
+<circle cx="619" cy="520" r="4" fill="#906e40"/>
+<circle cx="619" cy="562" r="4" fill="#906e40"/>
+<polyline points="299,394 427,394" fill="none" stroke="#555555" stroke-width="4"/>
+<rect x="331.0" y="384" width="64" height="20" fill="#edc785"/>
+<text x="328.0" y="374.2" font-family="Arial" font-size="18" fill="#203444">270 Ω</text>
+<circle cx="299" cy="394" r="5" fill="#132e3f"/>
+<circle cx="427" cy="394" r="5" fill="#132e3f"/>
+<polyline points="267,562 395,562" fill="none" stroke="#555555" stroke-width="4"/>
+<rect x="299.0" y="552" width="64" height="20" fill="#edc785"/>
+<text x="296.0" y="542.2" font-family="Arial" font-size="18" fill="#203444">470 Ω</text>
+<circle cx="267" cy="562" r="5" fill="#132e3f"/>
+<circle cx="395" cy="562" r="5" fill="#132e3f"/>
+<polyline points="203,436 331,436" fill="none" stroke="#555555" stroke-width="4"/>
+<rect x="235.0" y="426" width="64" height="20" fill="#edc785"/>
+<text x="232.0" y="416.2" font-family="Arial" font-size="18" fill="#203444">10 kΩ</text>
+<circle cx="203" cy="436" r="5" fill="#132e3f"/>
+<circle cx="331" cy="436" r="5" fill="#132e3f"/>
+<polyline points="107,520 171,520" fill="none" stroke="#555555" stroke-width="4"/>
+<circle cx="139.0" cy="520" r="26" fill="#438585"/>
+<text x="100" y="561.0" font-family="Arial" font-size="20" fill="#203444">+</text>
+<text x="164" y="561.0" font-family="Arial" font-size="20" fill="#203444">−</text>
+<text x="87" y="481.2" font-family="Arial" font-size="18" fill="#203444">100 µF</text>
+<circle cx="107" cy="520" r="5" fill="#132e3f"/>
+<circle cx="171" cy="520" r="5" fill="#132e3f"/>
+<polyline points="427,310 459,310" fill="none" stroke="#555555" stroke-width="4"/>
+<circle cx="443.0" cy="305" r="20" fill="#da8b9c"/>
+<text x="402" y="271.2" font-family="Arial" font-size="18" fill="#203444">IR LED → aim outward</text>
+<text x="419" y="339.4" font-family="Arial" font-size="16" fill="#203444">A</text>
+<text x="452" y="339.4" font-family="Arial" font-size="16" fill="#203444">K</text>
+<circle cx="427" cy="310" r="5" fill="#132e3f"/>
+<circle cx="459" cy="310" r="5" fill="#132e3f"/>
+<rect x="351" y="461" width="88" height="34" fill="#303d48"/>
+<circle cx="363" cy="478" r="4" fill="white"/>
+<text x="357" y="515.3" font-family="Arial" font-size="17" fill="#203444">E</text>
+<circle cx="395" cy="478" r="4" fill="white"/>
+<text x="389" y="515.3" font-family="Arial" font-size="17" fill="#203444">B</text>
+<circle cx="427" cy="478" r="4" fill="white"/>
+<text x="421" y="515.3" font-family="Arial" font-size="17" fill="#203444">C</text>
+<text x="491" y="483.3" font-family="Arial" font-size="17" fill="#203444">PN2222A</text>
+<text x="50" y="654.2" font-family="Arial" font-size="18" fill="#203444">ESP32 sits below this strip; use BOTH female header rows.</text>
+<text x="800" y="242.5" font-family="Arial" font-size="25" fill="#203444">SOLDER SIDE • flipped left ↔ right</text>
+<text x="800" y="274.0" font-family="Arial" font-size="20" fill="#203444">Keep edge A at the top when flipping.</text>
+<rect x="805" y="290" width="585" height="300" fill="#f3dfba"/>
+<text x="780" y="314.2" font-family="Arial" font-size="18" fill="#203444">A</text>
+<text x="780" y="356.2" font-family="Arial" font-size="18" fill="#203444">B</text>
+<text x="780" y="398.2" font-family="Arial" font-size="18" fill="#203444">C</text>
+<text x="780" y="440.2" font-family="Arial" font-size="18" fill="#203444">D</text>
+<text x="780" y="482.2" font-family="Arial" font-size="18" fill="#203444">E</text>
+<text x="780" y="524.2" font-family="Arial" font-size="18" fill="#203444">F</text>
+<text x="780" y="566.2" font-family="Arial" font-size="18" fill="#203444">G</text>
+<text x="1361" y="605.4" font-family="Arial" font-size="16" fill="#203444">1</text>
+<circle cx="1369" cy="310" r="4" fill="#906e40"/>
+<circle cx="1369" cy="352" r="4" fill="#906e40"/>
+<circle cx="1369" cy="394" r="4" fill="#906e40"/>
+<circle cx="1369" cy="436" r="4" fill="#906e40"/>
+<circle cx="1369" cy="478" r="4" fill="#906e40"/>
+<circle cx="1369" cy="520" r="4" fill="#906e40"/>
+<circle cx="1369" cy="562" r="4" fill="#906e40"/>
+<text x="1329" y="605.4" font-family="Arial" font-size="16" fill="#203444">2</text>
+<circle cx="1337" cy="310" r="4" fill="#906e40"/>
+<circle cx="1337" cy="352" r="4" fill="#906e40"/>
+<circle cx="1337" cy="394" r="4" fill="#906e40"/>
+<circle cx="1337" cy="436" r="4" fill="#906e40"/>
+<circle cx="1337" cy="478" r="4" fill="#906e40"/>
+<circle cx="1337" cy="520" r="4" fill="#906e40"/>
+<circle cx="1337" cy="562" r="4" fill="#906e40"/>
+<text x="1297" y="605.4" font-family="Arial" font-size="16" fill="#203444">3</text>
+<circle cx="1305" cy="310" r="4" fill="#906e40"/>
+<circle cx="1305" cy="352" r="4" fill="#906e40"/>
+<circle cx="1305" cy="394" r="4" fill="#906e40"/>
+<circle cx="1305" cy="436" r="4" fill="#906e40"/>
+<circle cx="1305" cy="478" r="4" fill="#906e40"/>
+<circle cx="1305" cy="520" r="4" fill="#906e40"/>
+<circle cx="1305" cy="562" r="4" fill="#906e40"/>
+<text x="1265" y="605.4" font-family="Arial" font-size="16" fill="#203444">4</text>
+<circle cx="1273" cy="310" r="4" fill="#906e40"/>
+<circle cx="1273" cy="352" r="4" fill="#906e40"/>
+<circle cx="1273" cy="394" r="4" fill="#906e40"/>
+<circle cx="1273" cy="436" r="4" fill="#906e40"/>
+<circle cx="1273" cy="478" r="4" fill="#906e40"/>
+<circle cx="1273" cy="520" r="4" fill="#906e40"/>
+<circle cx="1273" cy="562" r="4" fill="#906e40"/>
+<text x="1233" y="605.4" font-family="Arial" font-size="16" fill="#203444">5</text>
+<circle cx="1241" cy="310" r="4" fill="#906e40"/>
+<circle cx="1241" cy="352" r="4" fill="#906e40"/>
+<circle cx="1241" cy="394" r="4" fill="#906e40"/>
+<circle cx="1241" cy="436" r="4" fill="#906e40"/>
+<circle cx="1241" cy="478" r="4" fill="#906e40"/>
+<circle cx="1241" cy="520" r="4" fill="#906e40"/>
+<circle cx="1241" cy="562" r="4" fill="#906e40"/>
+<text x="1201" y="605.4" font-family="Arial" font-size="16" fill="#203444">6</text>
+<circle cx="1209" cy="310" r="4" fill="#906e40"/>
+<circle cx="1209" cy="352" r="4" fill="#906e40"/>
+<circle cx="1209" cy="394" r="4" fill="#906e40"/>
+<circle cx="1209" cy="436" r="4" fill="#906e40"/>
+<circle cx="1209" cy="478" r="4" fill="#906e40"/>
+<circle cx="1209" cy="520" r="4" fill="#906e40"/>
+<circle cx="1209" cy="562" r="4" fill="#906e40"/>
+<text x="1169" y="605.4" font-family="Arial" font-size="16" fill="#203444">7</text>
+<circle cx="1177" cy="310" r="4" fill="#906e40"/>
+<circle cx="1177" cy="352" r="4" fill="#906e40"/>
+<circle cx="1177" cy="394" r="4" fill="#906e40"/>
+<circle cx="1177" cy="436" r="4" fill="#906e40"/>
+<circle cx="1177" cy="478" r="4" fill="#906e40"/>
+<circle cx="1177" cy="520" r="4" fill="#906e40"/>
+<circle cx="1177" cy="562" r="4" fill="#906e40"/>
+<text x="1137" y="605.4" font-family="Arial" font-size="16" fill="#203444">8</text>
+<circle cx="1145" cy="310" r="4" fill="#906e40"/>
+<circle cx="1145" cy="352" r="4" fill="#906e40"/>
+<circle cx="1145" cy="394" r="4" fill="#906e40"/>
+<circle cx="1145" cy="436" r="4" fill="#906e40"/>
+<circle cx="1145" cy="478" r="4" fill="#906e40"/>
+<circle cx="1145" cy="520" r="4" fill="#906e40"/>
+<circle cx="1145" cy="562" r="4" fill="#906e40"/>
+<text x="1105" y="605.4" font-family="Arial" font-size="16" fill="#203444">9</text>
+<circle cx="1113" cy="310" r="4" fill="#906e40"/>
+<circle cx="1113" cy="352" r="4" fill="#906e40"/>
+<circle cx="1113" cy="394" r="4" fill="#906e40"/>
+<circle cx="1113" cy="436" r="4" fill="#906e40"/>
+<circle cx="1113" cy="478" r="4" fill="#906e40"/>
+<circle cx="1113" cy="520" r="4" fill="#906e40"/>
+<circle cx="1113" cy="562" r="4" fill="#906e40"/>
+<text x="1073" y="605.4" font-family="Arial" font-size="16" fill="#203444">10</text>
+<circle cx="1081" cy="310" r="4" fill="#906e40"/>
+<circle cx="1081" cy="352" r="4" fill="#906e40"/>
+<circle cx="1081" cy="394" r="4" fill="#906e40"/>
+<circle cx="1081" cy="436" r="4" fill="#906e40"/>
+<circle cx="1081" cy="478" r="4" fill="#906e40"/>
+<circle cx="1081" cy="520" r="4" fill="#906e40"/>
+<circle cx="1081" cy="562" r="4" fill="#906e40"/>
+<text x="1041" y="605.4" font-family="Arial" font-size="16" fill="#203444">11</text>
+<circle cx="1049" cy="310" r="4" fill="#906e40"/>
+<circle cx="1049" cy="352" r="4" fill="#906e40"/>
+<circle cx="1049" cy="394" r="4" fill="#906e40"/>
+<circle cx="1049" cy="436" r="4" fill="#906e40"/>
+<circle cx="1049" cy="478" r="4" fill="#906e40"/>
+<circle cx="1049" cy="520" r="4" fill="#906e40"/>
+<circle cx="1049" cy="562" r="4" fill="#906e40"/>
+<text x="1009" y="605.4" font-family="Arial" font-size="16" fill="#203444">12</text>
+<circle cx="1017" cy="310" r="4" fill="#906e40"/>
+<circle cx="1017" cy="352" r="4" fill="#906e40"/>
+<circle cx="1017" cy="394" r="4" fill="#906e40"/>
+<circle cx="1017" cy="436" r="4" fill="#906e40"/>
+<circle cx="1017" cy="478" r="4" fill="#906e40"/>
+<circle cx="1017" cy="520" r="4" fill="#906e40"/>
+<circle cx="1017" cy="562" r="4" fill="#906e40"/>
+<text x="977" y="605.4" font-family="Arial" font-size="16" fill="#203444">13</text>
+<circle cx="985" cy="310" r="4" fill="#906e40"/>
+<circle cx="985" cy="352" r="4" fill="#906e40"/>
+<circle cx="985" cy="394" r="4" fill="#906e40"/>
+<circle cx="985" cy="436" r="4" fill="#906e40"/>
+<circle cx="985" cy="478" r="4" fill="#906e40"/>
+<circle cx="985" cy="520" r="4" fill="#906e40"/>
+<circle cx="985" cy="562" r="4" fill="#906e40"/>
+<text x="945" y="605.4" font-family="Arial" font-size="16" fill="#203444">14</text>
+<circle cx="953" cy="310" r="4" fill="#906e40"/>
+<circle cx="953" cy="352" r="4" fill="#906e40"/>
+<circle cx="953" cy="394" r="4" fill="#906e40"/>
+<circle cx="953" cy="436" r="4" fill="#906e40"/>
+<circle cx="953" cy="478" r="4" fill="#906e40"/>
+<circle cx="953" cy="520" r="4" fill="#906e40"/>
+<circle cx="953" cy="562" r="4" fill="#906e40"/>
+<text x="913" y="605.4" font-family="Arial" font-size="16" fill="#203444">15</text>
+<circle cx="921" cy="310" r="4" fill="#906e40"/>
+<circle cx="921" cy="352" r="4" fill="#906e40"/>
+<circle cx="921" cy="394" r="4" fill="#906e40"/>
+<circle cx="921" cy="436" r="4" fill="#906e40"/>
+<circle cx="921" cy="478" r="4" fill="#906e40"/>
+<circle cx="921" cy="520" r="4" fill="#906e40"/>
+<circle cx="921" cy="562" r="4" fill="#906e40"/>
+<text x="881" y="605.4" font-family="Arial" font-size="16" fill="#203444">16</text>
+<circle cx="889" cy="310" r="4" fill="#906e40"/>
+<circle cx="889" cy="352" r="4" fill="#906e40"/>
+<circle cx="889" cy="394" r="4" fill="#906e40"/>
+<circle cx="889" cy="436" r="4" fill="#906e40"/>
+<circle cx="889" cy="478" r="4" fill="#906e40"/>
+<circle cx="889" cy="520" r="4" fill="#906e40"/>
+<circle cx="889" cy="562" r="4" fill="#906e40"/>
+<text x="849" y="605.4" font-family="Arial" font-size="16" fill="#203444">17</text>
+<circle cx="857" cy="310" r="4" fill="#906e40"/>
+<circle cx="857" cy="352" r="4" fill="#906e40"/>
+<circle cx="857" cy="394" r="4" fill="#906e40"/>
+<circle cx="857" cy="436" r="4" fill="#906e40"/>
+<circle cx="857" cy="478" r="4" fill="#906e40"/>
+<circle cx="857" cy="520" r="4" fill="#906e40"/>
+<circle cx="857" cy="562" r="4" fill="#906e40"/>
+<text x="817" y="605.4" font-family="Arial" font-size="16" fill="#203444">18</text>
+<circle cx="825" cy="310" r="4" fill="#906e40"/>
+<circle cx="825" cy="352" r="4" fill="#906e40"/>
+<circle cx="825" cy="394" r="4" fill="#906e40"/>
+<circle cx="825" cy="436" r="4" fill="#906e40"/>
+<circle cx="825" cy="478" r="4" fill="#906e40"/>
+<circle cx="825" cy="520" r="4" fill="#906e40"/>
+<circle cx="825" cy="562" r="4" fill="#906e40"/>
+<polyline points="1337,520 1337,394 1145,394" fill="none" stroke="#c43c35" stroke-width="5"/>
+<polyline points="1017,394 1017,310" fill="none" stroke="#c77d00" stroke-width="5"/>
+<polyline points="985,310 985,478 1017,478" fill="none" stroke="#8446b0" stroke-width="5"/>
+<polyline points="1049,562 1049,478" fill="none" stroke="#237ec1" stroke-width="5"/>
+<polyline points="1113,436 1049,436 1049,478" fill="none" stroke="#237ec1" stroke-width="5"/>
+<polyline points="1273,520 1241,520 1241,436" fill="none" stroke="#263c4c" stroke-width="5"/>
+<polyline points="1241,436 1241,478 1081,478" fill="none" stroke="#263c4c" stroke-width="5"/>
+<circle cx="1337" cy="520" r="6" fill="#c43c35"/>
+<circle cx="1145" cy="394" r="6" fill="#c43c35"/>
+<circle cx="1017" cy="394" r="6" fill="#c77d00"/>
+<circle cx="1017" cy="310" r="6" fill="#c77d00"/>
+<circle cx="985" cy="310" r="6" fill="#8446b0"/>
+<circle cx="1017" cy="478" r="6" fill="#8446b0"/>
+<circle cx="1049" cy="562" r="6" fill="#237ec1"/>
+<circle cx="1049" cy="478" r="6" fill="#237ec1"/>
+<circle cx="1113" cy="436" r="6" fill="#237ec1"/>
+<circle cx="1049" cy="478" r="6" fill="#237ec1"/>
+<circle cx="1273" cy="520" r="6" fill="#263c4c"/>
+<circle cx="1241" cy="436" r="6" fill="#263c4c"/>
+<circle cx="1241" cy="436" r="6" fill="#263c4c"/>
+<circle cx="1081" cy="478" r="6" fill="#263c4c"/>
+<circle cx="1337" cy="520" r="6" fill="#138356"/>
+<text x="1317" y="544.4" font-family="Arial" font-size="16" fill="#203444">5V</text>
+<circle cx="1273" cy="520" r="6" fill="#138356"/>
+<text x="1253" y="544.4" font-family="Arial" font-size="16" fill="#203444">GND</text>
+<circle cx="1177" cy="562" r="6" fill="#138356"/>
+<text x="1157" y="586.4" font-family="Arial" font-size="16" fill="#203444">GPIO4</text>
+<text x="800" y="654.2" font-family="Arial" font-size="18" fill="#203444">ESP32 sits below this strip; use BOTH female header rows.</text>
+<text x="40" y="724.3" font-family="Arial" font-size="27" fill="#203444">Placement / lead identities</text>
+<text x="40" y="765.8" font-family="Arial" font-size="22" fill="#203444">270 Ω: C8–C12     |     470 Ω: G7–G11     |     10 kΩ: D5–D9</text>
+<text x="40" y="801.8" font-family="Arial" font-size="22" fill="#203444">IR LED: anode A12, cathode A13. Bend the LED to point beyond the board edge.</text>
+<text x="40" y="837.8" font-family="Arial" font-size="22" fill="#203444">Transistor: emitter E10, base E11, collector E12. Identify leads before forming them.</text>
+<text x="40" y="873.8" font-family="Arial" font-size="22" fill="#203444">100 µF: positive F2, negative F4. Gently adapt lead spacing; do not force the body.</text>
+<text x="40" y="909.8" font-family="Arial" font-size="22" fill="#203444">ESP32 header pad marked 5V → F2; GND → F4; GPIO4 (marked 4) → G7.</text>
+<text x="40" y="973.5" font-family="Arial" font-size="25" fill="#203444">Solder-side wires: insulated wire, stripped only at endpoints.</text>
+<text x="40" y="1009.9" font-family="Arial" font-size="21" fill="#203444">Bends and crossings are NOT junctions. Solder only the listed endpoints; pads are isolated.</text>
+<text x="40" y="1046.9" font-family="Arial" font-size="21" fill="#203444">Keep bare wires away from all other header pads. No receiver, 3V3 connection or firmware change.</text>
+<text x="40" y="1083.9" font-family="Arial" font-size="21" fill="#203444">Unplug USB and remove ESP32 before wiring. Check for shorts, then fit ESP32 and test.</text>
+<text x="40" y="1120.9" font-family="Arial" font-size="21" fill="#203444">Header hole coordinates are intentionally omitted: the photo hides them. Follow PCB pin labels.</text>
+</svg>

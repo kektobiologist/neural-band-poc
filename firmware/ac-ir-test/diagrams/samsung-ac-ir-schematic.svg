@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1800" viewBox="0 0 1600 1800">
+<title>ESP32-S3 Samsung AC IR transmitter and receiver schematic</title>
+<rect width="1600" height="1800" fill="white"/>
+<text x="65" y="85.48" font-family="Arial,sans-serif" font-size="44" fill="#152836" font-weight="700">ESP32-S3 → Samsung AC</text>
+<text x="65" y="125.92" font-family="Arial,sans-serif" font-size="26" fill="#536773" font-weight="400">USB powered • GPIO4: IR transmit • GPIO5: IR receive</text>
+<polyline points="410,200 1420,200" fill="none" stroke="#b32936" stroke-width="4" stroke-linejoin="round"/>
+<text x="430" y="182.08" font-family="Arial,sans-serif" font-size="24" fill="#b32936" font-weight="700">+5 V from USB-powered board</text>
+<rect x="65" y="350" width="310" height="500" fill="#f2f6f8" stroke="#152836" stroke-width="3"/>
+<text x="100" y="415.6" font-family="Arial,sans-serif" font-size="30" fill="#152836" font-weight="700">U1  ESP32-S3</text>
+<text x="100" y="453.16" font-family="Arial,sans-serif" font-size="23" fill="#152836" font-weight="400">WROOM-1 N16R8</text>
+<text x="100" y="494.16" font-family="Arial,sans-serif" font-size="23" fill="#536773" font-weight="400">USB power + serial</text>
+<text x="278" y="570.08" font-family="Arial,sans-serif" font-size="24" fill="#152836" font-weight="700">5V</text>
+<polyline points="375,565 410,565 410,200" fill="none" stroke="#b32936" stroke-width="4" stroke-linejoin="round"/>
+<text x="250" y="659.08" font-family="Arial,sans-serif" font-size="24" fill="#152836" font-weight="700">GPIO4</text>
+<polyline points="375,650 525,650" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<text x="260" y="805.08" font-family="Arial,sans-serif" font-size="24" fill="#152836" font-weight="700">GND</text>
+<polyline points="375,800 410,800 410,970 1420,970" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<text x="100" y="739.32" font-family="Arial,sans-serif" font-size="21" fill="#536773" font-weight="400">Pin labels only;</text>
+<text x="100" y="767.32" font-family="Arial,sans-serif" font-size="21" fill="#536773" font-weight="400">not header positions.</text>
+<text x="110" y="833.24" font-family="Arial,sans-serif" font-size="22" fill="#152836" font-weight="700">3V3</text>
+<polyline points="140,850 140,1025" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<text x="104" y="1054.16" font-family="Arial,sans-serif" font-size="23" fill="#152836" font-weight="700">3V3</text>
+<text x="210" y="833.24" font-family="Arial,sans-serif" font-size="22" fill="#152836" font-weight="700">GPIO5</text>
+<polyline points="265,850 265,1025" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<text x="221" y="1054.16" font-family="Arial,sans-serif" font-size="23" fill="#152836" font-weight="700">GPIO5</text>
+<polyline points="950,200 950,320" fill="none" stroke="#b32936" stroke-width="4" stroke-linejoin="round"/>
+<circle cx="950" cy="200" r="6" fill="#244858" stroke="#244858" stroke-width="1"/>
+<polyline points="950,320 950,330" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<rect x="938" y="330" width="24" height="48" fill="white" stroke="#152836" stroke-width="3"/>
+<polyline points="950,378 950,390" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<text x="980" y="361.08" font-family="Arial,sans-serif" font-size="24" fill="#152836" font-weight="400">R1  220 Ω</text>
+<text x="980" y="394.24" font-family="Arial,sans-serif" font-size="22" fill="#536773" font-weight="400">≥ 0.25 W</text>
+<polyline points="950,390 950,505" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<polygon points="930,505 970,505 950,537" fill="#152836"/>
+<polyline points="928,540 972,540" fill="none" stroke="#152836" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="950,540 950,590" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="979,512 1007,484" fill="none" stroke="#152836" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="1007,484 992.857864376269,489.6568542494924 1001.3431457505077,498.14213562373095" fill="#152836"/>
+<polyline points="989,535 1017,507" fill="none" stroke="#152836" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="1017,507 1002.857864376269,512.6568542494923 1011.3431457505077,521.142135623731" fill="#152836"/>
+<text x="1025" y="538.92" font-family="Arial,sans-serif" font-size="26" fill="#152836" font-weight="700">D1  IR LED</text>
+<text x="1025" y="571.16" font-family="Arial,sans-serif" font-size="23" fill="#152836" font-weight="400">940 nm</text>
+<text x="905" y="505.24" font-family="Arial,sans-serif" font-size="22" fill="#152836" font-weight="400">A</text>
+<text x="905" y="561.24" font-family="Arial,sans-serif" font-size="22" fill="#152836" font-weight="400">K</text>
+<polyline points="525,650 555,650" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<rect x="555" y="638" width="90" height="24" fill="white" stroke="#152836" stroke-width="3"/>
+<polyline points="645,650 905,650" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<text x="540" y="622.08" font-family="Arial,sans-serif" font-size="24" fill="#152836" font-weight="400">R4  470 Ω</text>
+<circle cx="780" cy="650" r="6" fill="#244858" stroke="#244858" stroke-width="1"/>
+<polyline points="780,650 780,710" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="780,710 780,720" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<rect x="768" y="720" width="24" height="48" fill="white" stroke="#152836" stroke-width="3"/>
+<polyline points="780,768 780,780" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<text x="810" y="751.08" font-family="Arial,sans-serif" font-size="24" fill="#152836" font-weight="400">R5  10 kΩ</text>
+<polyline points="780,780 780,970" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<circle cx="780" cy="970" r="6" fill="#244858" stroke="#244858" stroke-width="1"/>
+<text x="525" y="809.16" font-family="Arial,sans-serif" font-size="23" fill="#536773" font-weight="400">Base pull-down</text>
+<text x="525" y="843.16" font-family="Arial,sans-serif" font-size="23" fill="#536773" font-weight="400">R5 = 10 kΩ</text>
+<circle cx="930" cy="650" r="64" fill="white" stroke="#152836" stroke-width="3"/>
+<polyline points="865,650 905,650" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="905,615 905,685" fill="none" stroke="#152836" stroke-width="5" stroke-linejoin="round"/>
+<polyline points="905,632 950,603 950,590" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="905,671 950,702 950,970" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="930,688 950,702" fill="none" stroke="#152836" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="950,702 941.9715271789134,689.0561356557992 935.0899790465535,698.8869187020277" fill="#152836"/>
+<text x="875" y="668.4" font-family="Arial,sans-serif" font-size="20" fill="#152836" font-weight="400">B</text>
+<text x="963" y="604.32" font-family="Arial,sans-serif" font-size="21" fill="#152836" font-weight="400">C</text>
+<text x="963" y="723.32" font-family="Arial,sans-serif" font-size="21" fill="#152836" font-weight="400">E</text>
+<text x="1020" y="638.0" font-family="Arial,sans-serif" font-size="25" fill="#152836" font-weight="700">Q1</text>
+<text x="1020" y="673.0" font-family="Arial,sans-serif" font-size="25" fill="#152836" font-weight="700">PN2222ATA</text>
+<text x="1020" y="706.16" font-family="Arial,sans-serif" font-size="23" fill="#152836" font-weight="400">NPN</text>
+<circle cx="950" cy="970" r="6" fill="#244858" stroke="#244858" stroke-width="1"/>
+<circle cx="1240" cy="200" r="6" fill="#244858" stroke="#244858" stroke-width="1"/>
+<polyline points="1240,200 1240,385" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="1210,385 1270,385" fill="none" stroke="#152836" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="1210,410 1270,410" fill="none" stroke="#152836" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="1240,410 1240,970" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<circle cx="1240" cy="970" r="6" fill="#244858" stroke="#244858" stroke-width="1"/>
+<text x="1095" y="303.0" font-family="Arial,sans-serif" font-size="25" fill="#152836" font-weight="700">C1</text>
+<text x="1095" y="342.24" font-family="Arial,sans-serif" font-size="22" fill="#152836" font-weight="400">100 µF / 25 V</text>
+<text x="1185" y="378.92" font-family="Arial,sans-serif" font-size="26" fill="#b32936" font-weight="700">+</text>
+<text x="1186" y="432.0" font-family="Arial,sans-serif" font-size="25" fill="#152836" font-weight="400">−</text>
+<circle cx="1420" cy="200" r="6" fill="#244858" stroke="#244858" stroke-width="1"/>
+<polyline points="1420,200 1420,385" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="1390,385 1450,385" fill="none" stroke="#152836" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="1390,410 1450,410" fill="none" stroke="#152836" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="1420,410 1420,970" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<circle cx="1420" cy="970" r="6" fill="#244858" stroke="#244858" stroke-width="1"/>
+<text x="1465" y="303.0" font-family="Arial,sans-serif" font-size="25" fill="#152836" font-weight="700">C2</text>
+<text x="1465" y="342.24" font-family="Arial,sans-serif" font-size="22" fill="#152836" font-weight="400">100 nF</text>
+<polyline points="950,970 950,985" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="926,985 974,985" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="934,995 966,995" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="943,1005 957,1005" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<text x="1010" y="1020.08" font-family="Arial,sans-serif" font-size="24" fill="#152836" font-weight="700">Common GND</text>
+<polyline points="65,1120 1535,1120" fill="none" stroke="#ccd6dc" stroke-width="2" stroke-linejoin="round"/>
+<text x="65" y="1189.44" font-family="Arial,sans-serif" font-size="32" fill="#152836" font-weight="700">IR receiver / remote capture</text>
+<text x="65" y="1231.16" font-family="Arial,sans-serif" font-size="23" fill="#536773" font-weight="400">Matching 3V3 and GPIO5 labels are electrically connected to U1 above.</text>
+<rect x="650" y="1320" width="310" height="225" fill="#f2f6f8" stroke="#152836" stroke-width="3"/>
+<text x="680" y="1376.68" font-family="Arial,sans-serif" font-size="29" fill="#152836" font-weight="700">U2  VS1838B</text>
+<text x="680" y="1413.16" font-family="Arial,sans-serif" font-size="23" fill="#152836" font-weight="400">38 kHz receiver</text>
+<text x="665" y="1460.24" font-family="Arial,sans-serif" font-size="22" fill="#152836" font-weight="700">VCC</text>
+<polyline points="650,1455 440,1455 440,1290" fill="none" stroke="#b32936" stroke-width="4" stroke-linejoin="round"/>
+<text x="407" y="1277.0" font-family="Arial,sans-serif" font-size="25" fill="#b32936" font-weight="700">3V3</text>
+<text x="869" y="1484.24" font-family="Arial,sans-serif" font-size="22" fill="#152836" font-weight="700">OUT</text>
+<polyline points="960,1480 1175,1480" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<text x="1190" y="1487.0" font-family="Arial,sans-serif" font-size="25" fill="#152836" font-weight="700">GPIO5</text>
+<text x="1170" y="1530.24" font-family="Arial,sans-serif" font-size="22" fill="#536773" font-weight="400">Idle HIGH / active LOW</text>
+<text x="769" y="1528.24" font-family="Arial,sans-serif" font-size="22" fill="#152836" font-weight="700">GND</text>
+<polyline points="800,1545 800,1610 440,1610" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="440,1455 440,1510" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<circle cx="440" cy="1455" r="6" fill="#244858" stroke="#244858" stroke-width="1"/>
+<polyline points="410,1510 470,1510" fill="none" stroke="#152836" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="410,1535 470,1535" fill="none" stroke="#152836" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="440,1535 440,1610" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<text x="295" y="1513.0" font-family="Arial,sans-serif" font-size="25" fill="#152836" font-weight="700">C3</text>
+<text x="295" y="1546.16" font-family="Arial,sans-serif" font-size="23" fill="#152836" font-weight="400">100 nF</text>
+<polyline points="800,1610 800,1625" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="776,1625 824,1625" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="784,1635 816,1635" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<polyline points="793,1645 807,1645" fill="none" stroke="#244858" stroke-width="4" stroke-linejoin="round"/>
+<text x="850" y="1631.16" font-family="Arial,sans-serif" font-size="23" fill="#152836" font-weight="400">Common GND</text>
+<polyline points="1060,1340 1000,1375" fill="none" stroke="#152836" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="1000,1375 1015.1161307657226,1373.1284790480536 1009.0696784594336,1362.7631322372722" fill="#152836"/>
+<polyline points="1080,1380 1020,1415" fill="none" stroke="#152836" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="1020,1415 1035.1161307657226,1413.1284790480536 1029.0696784594334,1402.7631322372722" fill="#152836"/>
+<text x="1135" y="1372.08" font-family="Arial,sans-serif" font-size="24" fill="#152836" font-weight="400">IR from remote</text>
+<text x="1135" y="1406.08" font-family="Arial,sans-serif" font-size="24" fill="#152836" font-weight="400">or test emitter</text>
+<text x="65" y="1722.08" font-family="Arial,sans-serif" font-size="24" fill="#152836" font-weight="400">C3 goes close to U2. Verify its physical pin order; this symbol uses functional pin labels.</text>
+<text x="65" y="1762.08" font-family="Arial,sans-serif" font-size="24" fill="#536773" font-weight="400">Keep the receiver on 3.3 V. R1 = 220 Ω; R5 = 10 kΩ. All grounds are common.</text>
+</svg>
