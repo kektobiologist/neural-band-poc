@@ -51,7 +51,7 @@ class InputService:
                 request_id, status = fields.get((1, 0)), fields.get((2, 0))
                 config = checked_fields(fields[6, 2]) if (6, 2) in fields else {}
                 self.emit("input_rpc_response", channel=channel, request_id=request_id, status=status,
-                          is_left_handed=config.get((10, 0)))
+                          is_left_handed=config.get((10, 0)), device_state=config.get((6, 0)))
                 if (4, 2) in fields:
                     self.emit("device_info_received", request_id=request_id, status=status)
                 if (5, 2) in fields:

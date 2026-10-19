@@ -72,6 +72,9 @@ class BandHandshake:
         self.hand = self.hand_error = None
         self.config_request = None
         self.config_id = 4
+        self.device_state_request = None
+        self.device_state_acknowledged = None
+        self.standby_acknowledged = False
         self.rpc_outgoing = bytearray()
         self.inference_start_pending = stream_control == "inference"
         self.private = ec.generate_private_key(ec.SECP256R1())
@@ -125,7 +128,31 @@ class BandHandshake:
             self.input_service.interaction.set_hand(None, message)
         self.emit("handedness_failed", message=message)
 
+    def request_device_state(self, state):
+        """Experimental ConfigReq.device_state; acknowledgement is not a power measurement."""
+        if state not in (1, 2):
+            raise ValueError("Device state must be 1 (standby) or 2 (active)")
+        if not self.startup_sent or self.config_request:
+            raise ValueError("Wait for input setup and hand configuration before changing device state")
+        self.config_id += 1
+        payload = field(1, self.config_id) + field(5, field(6, state))
+        channel = 0x8007
+        if channel in self.rpc_channels:
+            frame = len(payload).to_bytes(2, "big") + channel.to_bytes(2, "big") + payload
+        else:
+            frame = typed_frame(channel, [0x8100ce56, 0x02000314], payload)
+        encrypted = self.encrypt_frame(frame)
+        self.rpc_channels.add(channel)
+        self.device_state_request = (self.config_id, state, self.clock() + 5)
+        self.device_state_acknowledged = None
+        self.emit("device_state_request_queued", request_id=self.config_id, state=state)
+        return encrypted
+
     def tick(self):
+        if self.device_state_request and self.clock() >= self.device_state_request[2]:
+            request_id, state, _ = self.device_state_request
+            self.device_state_request = None
+            self.emit("device_state_timeout", request_id=request_id, state=state)
         if self.config_request and self.clock() >= self.config_request[2]:
             self.fail_hand("Band hand confirmation timed out")
         self.input_service.tick()
@@ -134,6 +161,17 @@ class BandHandshake:
 
     def receive_input(self, event, **data):
         self.emit(event, **data)
+        if event == "input_rpc_response" and self.device_state_request:
+            request_id, state, deadline = self.device_state_request
+            if data["channel"] & 0x7fff == 7 and data["request_id"] == request_id:
+                self.device_state_request = None
+                accepted = data["status"] == 1 and self.clock() < deadline
+                if accepted:
+                    self.device_state_acknowledged = state
+                    if state == 1:
+                        self.standby_acknowledged = True
+                self.emit("device_state_reply", request_id=request_id, requested_state=state,
+                          status=data["status"], echoed_state=data.get("device_state"), accepted=accepted)
         if (event == "input_rpc_response" and self.inference_start_pending
                 and data["channel"] & 0x7fff == 5 and data["request_id"] == 2 and data["status"] == 1):
             # Confirm the link answers queries before trying the experimental stream.
@@ -415,6 +453,9 @@ def run_probe(args, emit):
     deadline = time.monotonic() + (95 if args.stream_control == "handwriting" else args.seconds)
     stop_queued = False
     recording_started = False
+    standby_after = getattr(args, "standby_after", None)
+    standby_at = None
+    standby_sent = active_sent = False
     stop_requested = False
     stopping = False
     def stop_signal(signum, frame):
@@ -466,6 +507,21 @@ def run_probe(args, emit):
             if delegate.channel is None:
                 continue
             incoming, outgoing = delegate.channel.inputStream(), delegate.channel.outputStream()
+            if standby_after is not None and not active_sent:
+                probe = delegate.handshake
+                if standby_sent and time.monotonic() >= deadline - 8:
+                    delegate.outgoing.extend(probe.request_device_state(2))
+                    active_sent = True
+                    emit("standby_trial_phase", phase="active_recovery")
+                    # Allow the active reply to arrive even after Ctrl-C.
+                    deadline = max(deadline, time.monotonic() + 8)
+                elif (not standby_sent and not stopping and standby_at is not None
+                      and time.monotonic() >= standby_at and time.monotonic() < deadline - 13
+                      and probe.hand is not None and probe.config_request is None
+                      and probe.input_service.streams_enabled_acknowledged):
+                    delegate.outgoing.extend(probe.request_device_state(1))
+                    standby_sent = True
+                    emit("standby_trial_phase", phase="standby_requested")
             if (args.stream_control in STREAM_FIELDS and delegate.handshake.tx_keys is not None
                     and delegate.handshake.startup_sent
                     and not stop_queued and time.monotonic() >= deadline - 3):
@@ -484,6 +540,9 @@ def run_probe(args, emit):
                         recording_started = True
                         deadline = time.monotonic() + args.seconds
                         emit("recording_started", duration_seconds=args.seconds, mode=args.stream_control)
+                        if standby_after is not None:
+                            standby_at = time.monotonic() + standby_after
+                            emit("standby_trial_phase", phase="baseline", standby_after_seconds=standby_after)
             if delegate.outgoing and outgoing.hasSpaceAvailable():
                 data = bytes(delegate.outgoing)
                 count = outgoing.write_maxLength_(data, len(data))
@@ -522,6 +581,13 @@ def run_probe(args, emit):
             if hw.problem or not hw.samples:
                 raise ValueError(hw.problem or "No handwriting samples received")
         delegate.handshake.input_service.finish()
+        if standby_after is not None:
+            if not standby_sent:
+                raise ValueError("Standby trial never reached a confirmed stream/hand baseline")
+            if not active_sent or delegate.handshake.device_state_acknowledged != 2:
+                raise ValueError("Active recovery was not acknowledged; wake the band with a middle double tap")
+            if not delegate.handshake.standby_acknowledged:
+                raise ValueError("Standby request was not acknowledged; inspect device_state_reply/timeout events")
         if args.hand is not None and delegate.handshake.hand != args.hand:
             raise ValueError(delegate.handshake.hand_error or "Requested band hand was not confirmed")
         if args.stream_control in STREAM_FIELDS and not delegate.handshake.input_service.streams_disabled_acknowledged:
@@ -557,6 +623,8 @@ if __name__ == "__main__":
                         help="query flags, raw EMG, gestures/motion, raw inference, or handwriting; handwriting restores saved settings before disconnect")
     parser.add_argument("--query-config", action="store_true", help="read current input-service configuration; includes EndLinkSetup")
     parser.add_argument("--hand", choices=("left", "right"), help="set the band hand and verify it with a separate read; omitted keeps the band setting")
+    parser.add_argument("--standby-after", type=float,
+                        help="experimental dial trial: request standby this many seconds after motion starts; request active before shutdown")
     parser.add_argument("--output", type=Path, required=True, help="new local JSONL capture; includes session material")
     args = parser.parse_args()
     if not 1 <= args.seconds <= 300:
@@ -565,6 +633,9 @@ if __name__ == "__main__":
         parser.error("stream experiments need at least 10 seconds for setup and cleanup")
     if args.stream_control in STREAM_FIELDS:
         args.query_config = True
+    if args.standby_after is not None:
+        if args.stream_control != "dial" or not 5 <= args.standby_after <= args.seconds - 25:
+            parser.error("--standby-after requires dial mode and 5 <= delay <= seconds - 25")
     args.identifier = args.identifier.upper()
     with args.output.open("x") as capture:
         os.chmod(args.output, 0o600)

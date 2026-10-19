@@ -23,6 +23,10 @@ At 115200 baud, serial commands are `on`, `off`, `off single`, `up`, `down`,
 Disabling gestures does not interrupt an active shutdown sequence, so its final
 OFF still goes out. It also does not disable manual serial AC commands.
 
+Planned battery-saving behavior: [Neural Band standby](STANDBY.md). This describes
+idle standby, middle-double-tap wake, and the existing AC gesture mapping;
+standby is not yet implemented in this firmware.
+
 Watch for `GESTURE`, then `BAND -> AC ON/OFF/TEMP_UP/TEMP_DOWN`, then `IR SENT`.
 A successful OFF sequence ends with `SHUTDOWN sequence complete`.
 These logs establish dispatch, not appliance reception; check the AC display.

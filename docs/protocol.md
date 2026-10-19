@@ -250,3 +250,121 @@ example, top classes `7, 7, 99, 8, 99, 96, 99, 26` produce `hi A`: 7 is h,
 letters permits both letters; its duration never creates a space. Special-class
 handling follows research/community mappings and is not a claim that all 100
 classes have been individually elicited on this consumer firmware.
+# Standby investigation (2026-10-19)
+
+Initially prepared from public evidence; the physical trial below now verifies
+the core behavior on our band. The public starting points were
+[Kinesis issue 11](https://github.com/callbacked/kinesis/issues/11#issuecomment-6151575420)
+and Lumen's subsequent implementation. Kinesis's author identified a device-state
+request in Meta's client: RPC field 5 contains configuration field 6, with value
+1 for standby and 2 for active. Kinesis's current source at
+`5c78485f48c0758e2ce46ee11d3aaa070d827b75` has no standby controller.
+
+[Lumen's implementation](https://github.com/beyondlevi/rokid-lumen/blob/4fe237668683cbe7e613e3c0121723a9f176102a/rust/band-core/src/session.rs#L747)
+sends that request on the input service. Its comments and beta.25 changelog report
+that ordinary gestures and their vibrations stop; middle-finger double tap wakes
+the band but is consumed locally. The next gesture reaches the host. Its reply
+handler logs status and configuration rather than independently verifying the
+power state.
+
+[Lumen's screen handling](https://github.com/beyondlevi/rokid-lumen/blob/4fe237668683cbe7e613e3c0121723a9f176102a/app/src/main/java/dev/lumen/glasses/BandRuntime.kt#L267)
+also disables motion separately and keeps the gesture subscription enabled in
+normal standby. Its stronger power-saving option disables gestures too. These
+are distinct operations; neither silence nor a successful RPC measures battery
+savings. Whether EMG acquisition, inference or radio duty cycle changes remains
+unknown. A search of
+[Air Gestures](https://gitlab.com/896kb/air-gestures/-/tree/7de74f049f636f059f98f35772598ea5121593c2)
+found no additional standby implementation.
+
+## Interface and initial experiment
+
+Use the existing authenticated L2CAP/AirShield input-service connection: service
+`0xce56`, request type `0x02000314`, reply `0x02000315`. Our configuration channel
+is `0x8007`; its number is a local routing choice. Example plaintext RPC payloads:
+
+```text
+08 06 2a 02 30 01    request 6: standby
+08 07 2a 02 30 02    request 7: active
+```
+
+Reply field 1 correlates the request, field 2 is status (observed success 1),
+field 6 contains configuration, with nested field 6 potentially echoing state.
+An echo is not an independent measurement of standby.
+
+The separate named settings include `stream_in_standby`,
+`auto-standby-timeout-secs`, `standby-gesture`, `wake-gesture`,
+`middle-wake-enabled`, and `keep-alive`. Their numeric IDs change across firmware;
+resolve by name before any future experiments. Their effects and enum values
+are not established here. The first test leaves them unchanged.
+
+```sh
+python instrumentation/mac_band_probe.py BAND_UUID \
+  --identity-key LOCAL_OWNER_PEM --query-device-info \
+  --stream-control dial --seconds 90 --standby-after 15 \
+  --output captures/standby-trial-UNIQUE.jsonl
+```
+
+The timer starts when motion arrives. After a baseline with confirmed hand and
+stream subscriptions, it requests standby at 15 seconds, then active eight
+seconds before the end, then disables streams. Ctrl-C also schedules active
+recovery if standby was sent. Recovery is best effort: a broken transport or
+process failure can prevent it. Failed/missing standby or recovery acknowledgements
+produce an unsuccessful exit. The test does not change the band's hand.
+
+During baseline, try index taps and swipes. After the standby reply, repeat those
+without a middle double tap and note vibrations. Then perform one middle double
+tap, pause, and try index taps again. Compare gesture and motion counts across
+these intervals in the JSONL capture. Keeping motion subscriptions unchanged
+isolates the effect of the device-state request. A later separate trial can
+disable motion as Lumen does. Battery savings require a longer controlled test.
+
+Close other band clients before connecting, including clients in other worktrees
+(the existing connection lock is local to each checkout). Runtime imports and
+saved local connection material were checked; no hardware connection was made
+during preparation. Synthetic protocol tests verify request bytes, response
+correlation, rejection, timeout, and active recovery; they do not verify device
+behavior.
+
+## Physical standby trial (2026-10-19)
+
+Two local captures used the already enrolled identity and AirShield parameter 27
+in both directions on PSM 129. Both accepted standby (`status=1`, echoed state 1),
+accepted active recovery (`status=1`, echoed state 2), acknowledged all stream
+disables, and disconnected cleanly. No named wake/timeout/stream-in-standby
+settings were changed. Firmware identity was not independently decoded during
+this trial; do not assume an older firmware identifier from previous sessions.
+
+The repeat capture `captures/standby-trial-20261019T164549Z.jsonl` established:
+
+| Phase (UTC) | Band/host observation | Wearer observation |
+| --- | --- | --- |
+| Baseline, 16:46:14–16 | Exactly three index `singleTap` events | All three taps vibrated |
+| Standby acknowledged, 16:46:37.735 | State 1 echoed; no gesture events before wake | Three attempted index taps did not vibrate |
+| Wake, then index taps at 16:47:20–21 | Exactly three more index `singleTap` events; no middle `doubleTap` event | One middle double tap, then three index taps; vibration returned |
+| Recovery, 16:47:37.060 | Active state 2 acknowledged | No further action requested |
+| Shutdown, 16:47:42–45 | Gesture/gyro/orientation disables acknowledged; clean disconnect | — |
+
+This supports a device-side standby gate and a locally consumed wake gesture,
+not merely host-side filtering. The first capture,
+`captures/standby-trial-20261019T164334Z.jsonl`, is supplementary: the wearer
+reported two middle double taps followed by single taps, while only one middle
+double-tap event reached the host. Its pre-standby gesture baseline was missing,
+so use the repeat for the primary behavioral conclusion.
+
+Gyro streaming was **not stopped by standby** with the existing subscription
+enabled: 2,560 gyro samples over 20 baseline seconds (128 Hz), 4,095 over 32
+seconds after standby and before wake (~128 Hz), and 1,920 over 15 seconds after
+wake (128 Hz). Orientation was silent during that standby window and returned
+briefly around later gestures, but it also became silent before the explicit
+standby request in the repeat. Its behavior cannot be attributed solely to the
+standby command; inactivity or another gate remains possible.
+
+For host integration, retain the gesture subscription for wake detection and
+separately disable unneeded motion streams if reducing traffic is the goal.
+The first delivered gesture after a local wake may need to activate the host UI;
+do not depend on receiving the waking middle double tap itself. Battery/current,
+raw EMG, automatic standby timeout, and other firmware remain untested.
+
+The repeat's early stop also exercised graceful signal handling: active recovery
+was sent and acknowledged before stream shutdown. Capture files contain session
+material and remain ignored/local.

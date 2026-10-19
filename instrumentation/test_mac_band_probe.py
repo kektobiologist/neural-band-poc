@@ -86,6 +86,44 @@ class MacBandProbeTests(unittest.TestCase):
         self.assertEqual(self.config_reply(5, 0), [])
         self.assertEqual(self.probe.hand, 'left')
 
+    def test_device_state_wire_and_correlated_ack(self):
+        self.start_hand_session()
+        self.config_reply(5, 1)
+        self.assertEqual(self.read_requests(self.probe.request_device_state(1)),
+                         [(0x8007, {1: 6, 5: b'\x30\x01'})])
+        self.config_reply(6, channel=5)
+        self.assertIsNone(self.probe.device_state_acknowledged)
+        self.config_reply(999)
+        self.assertIsNone(self.probe.device_state_acknowledged)
+        self.config_reply(6)
+        self.assertEqual(self.probe.device_state_acknowledged, 1)
+        self.assertTrue(self.probe.standby_acknowledged)
+        self.assertEqual(self.read_requests(self.probe.request_device_state(2)),
+                         [(0x8007, {1: 7, 5: b'\x30\x02'})])
+        self.config_reply(7)
+        self.assertEqual(self.probe.device_state_acknowledged, 2)
+        self.assertEqual(self.probe.hand, 'left')
+
+    def test_device_state_timeout_rejection_and_recovery(self):
+        self.start_hand_session()
+        with self.assertRaises(ValueError):
+            self.probe.request_device_state(1)
+        self.config_reply(5, 0)
+        with self.assertRaises(ValueError):
+            self.probe.request_device_state(3)
+        self.read_requests(self.probe.request_device_state(1))
+        self.config_reply(6, status=2)
+        self.assertFalse(self.probe.standby_acknowledged)
+        self.read_requests(self.probe.request_device_state(1))
+        self.now = 6
+        self.probe.tick()
+        self.config_reply(7)
+        self.assertIsNone(self.probe.device_state_acknowledged)
+        self.assertTrue(any(e == 'device_state_timeout' for e, _ in self.events))
+        self.read_requests(self.probe.request_device_state(2))
+        self.config_reply(8)
+        self.assertEqual(self.probe.device_state_acknowledged, 2)
+
     def test_matching_preference_needs_no_write(self):
         self.start_hand_session('right')
         self.assertEqual(self.config_reply(5, 0), [])

@@ -98,6 +98,11 @@ static void submit(ac_action_t action, unsigned temp, bool gesture) {
 }
 
 void ac_control_gesture(const band_gesture_t *event) {
+    // TODO: Implement band-ac idle standby and wake handling per ../STANDBY.md.
+    // Schedule acknowledged device-state RPCs on the BLE context (1 standby,
+    // 2 active), keeping the gesture-only subscription. The wake middle double
+    // tap is consumed by the band; never synthesize it as AC_OFF or re-arm
+    // disabled controls. Preserve deduplication and any running IR sequence.
     ac_action_t action = ac_map_gesture(&filter, event);
     if (action == AC_NONE || !atomic_load(&armed)) return;
     const char *names[] = {"NONE", "ON", "OFF", "TEMP_UP", "TEMP_DOWN"};
