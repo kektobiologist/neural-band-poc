@@ -129,6 +129,9 @@ class DashboardTests(unittest.TestCase):
                     self.assertEqual(request('/api/start', {'mode':'dial'})[0], 202)
                     settle()
                     self.assertNotIn('--hand', commands[-1])
+                    self.assertEqual(request('/api/start', {'mode':'handwriting'})[0], 202)
+                    settle()
+                    self.assertEqual(commands[-1][commands[-1].index('--stream-control')+1], 'handwriting')
                     dashboard.running = True
                     self.assertEqual(request('/api/hand', {'hand':'left'})[0], 400)
                     self.assertEqual(request('/api/select-band', {'identifier':band['address']})[0], 400)
@@ -136,6 +139,41 @@ class DashboardTests(unittest.TestCase):
                 server.shutdown()
                 server.server_close()
                 thread.join()
+
+    def test_handwriting_view_is_curated_and_detects_stalls_and_interruptions(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(dashboard_server, 'CAPTURES', Path(directory)):
+            dashboard = dashboard_server.Dashboard()
+            dashboard.capture = Path(directory) / 'writing.jsonl'
+            sidecar = dashboard.capture.with_suffix('.live.json')
+            data = {'event':'handwriting_state', 'phase':'ready', 'text':'hello world',
+                    'raw_text':'helloworld', 'samples':30, 'missing_samples':0,
+                    'timestamp':datetime.now(timezone.utc).isoformat(), 'shared_secret':'SECRET'}
+            sidecar.write_text(json.dumps(data))
+            dashboard.running, dashboard.mode = True, 'handwriting'
+            self.assertTrue(dashboard.handwriting()['live'])
+            self.assertNotIn('SECRET', json.dumps(dashboard.handwriting()))
+            data['timestamp'] = (datetime.now(timezone.utc)-timedelta(seconds=2)).isoformat()
+            sidecar.write_text(json.dumps(data))
+            self.assertFalse(dashboard.handwriting()['live'])
+            dashboard.running = False
+            self.assertEqual(dashboard.handwriting()['phase'], 'interrupted')
+            data.update(phase='finished', restored=True)
+            sidecar.write_text(json.dumps(data))
+            self.assertEqual(dashboard.handwriting()['phase'], 'finished')
+            self.assertEqual(dashboard.handwriting()['text'], 'hello world')
+
+    def test_handwriting_worker_uses_long_cleanup_budget(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(dashboard_server, 'CAPTURES', Path(directory)):
+            dashboard = dashboard_server.Dashboard()
+            dashboard.identifier = 'band-a'
+            dashboard.capture = Path(directory) / 'writing.jsonl'
+            calls = []
+            with patch.object(dashboard, '_child', side_effect=lambda command, timeout: calls.append((command, timeout)) or 0):
+                dashboard._run('handwriting')
+            command, timeout = calls[-1]
+            self.assertEqual(command[command.index('--stream-control')+1], 'handwriting')
+            self.assertEqual(command[command.index('--seconds')+1], '300')
+            self.assertGreaterEqual(timeout, 395)
 
     def test_dial_settings_are_validated_and_saved_for_the_receiver(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(dashboard_server,'CAPTURES',Path(directory)):

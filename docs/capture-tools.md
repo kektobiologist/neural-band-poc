@@ -1,5 +1,66 @@
 # capture tools
 
+## Firmware 7fada0507764+ / Android 294.1.0.25.165 (2026-10-19)
+
+The enrolled-owner Mac probe was verified against this firmware with AirShield
+parameter **27 in both directions**. The band accepted the recovered identity
+and returned device info and input configuration. The probe now accepts RX 27;
+the existing key derivation and authenticated packet decoder already supported it.
+A stale macOS Bluetooth bond initially caused `Encryption is insufficient` before
+AirShield authentication. Forgetting only the Mac-side bond and pairing again
+resolved that transport error without changing the Meta enrollment.
+
+The Android native observer in `instrumentation/capture_android_native.js` still
+targets its explicitly named older build. Do not run its offsets against 294.1.0.
+The validated 294.1.0 observer, identity candidates, packet captures, and Mac
+verification are local-only under `captures/handwriting-20261019/`. Candidate 1
+was accepted by the band; the dashboard identity mapping was updated locally.
+
+A tutorial sample labeled “this is wild” yielded 138 reassembled authenticated
+band messages, but no identified handwriting result or stroke stream. There were
+two observer buffer-read errors and a glasses connection timeout during the
+sample. Whole-capture decoding remains incomplete. Phone-side capture does not
+directly observe the band-to-glasses radio link. Handwriting-related telemetry
+names observed before the sample do not establish a live handwriting protocol.
+
+The Mac config response reports inference pipeline 1, stride 72, and 3 logits.
+These are observed configuration values, not identified handwriting labels.
+The existing nine-logit interpretation must not be applied to this output.
+
+### Direct handwriting (verified 2026-10-19)
+
+`--stream-control handwriting` discovers `data-collection` and
+`data-collection-model` by name, snapshots both values, enables stream fields
+4/22/23, writes collection=1/model=5, and verifies both with separate reads.
+On this firmware their IDs are **7/8**, and the original values are **0/4**.
+Never hardcode the reference implementation's IDs or default model 2.
+The first live check received 69 normalized 100-class distributions on pipeline
+3 without sequence gaps; it then restored 0/4, read both back, and confirmed
+streams off. Idle output contained no text. A subsequent labeled “this is wild” sample
+decoded live as `thisiswild.` (249 samples, no sequence gaps). All letters
+were recognized, but spaces were absent. The wearer confirmed that the trailing
+period was intentionally written; it was not an extra decoder insertion. Settings 0/4 and stream disable were verified afterward. This is one
+successful sample, not a general accuracy benchmark.
+
+```sh
+.venv/bin/python instrumentation/mac_band_probe.py BAND_UUID \
+  --identity-key LOCAL_OWNER_PEM --stream-control handwriting \
+  --seconds 120 --output captures/handwriting-new.jsonl
+```
+
+Wait for `handwriting_ready`, then write. The duration begins when at least five
+valid samples arrive. `handwriting_text` reports a basic greedy CTC transcript;
+raw scores remain in `handwriting_sample` events. Blanks, repeated predictions,
+spaces, deletion, newline, and shift are handled, with no language model.
+SIGINT/SIGTERM and the normal duration limit initiate restoration with readbacks.
+A transport loss or process crash can prevent restoration; the capture records
+original values before any setting writes, and unconfirmed restoration is an
+error. Captures contain session secrets and remain local/ignored (mode 0600).
+
+Protocol and character mapping reference: [Rokid Lumen at 4fe2376](https://github.com/beyondlevi/rokid-lumen/tree/4fe237668683cbe7e613e3c0121723a9f176102a/rust/band-core/src),
+itself crediting Kinesis. The reference license is retained under
+`instrumentation/licenses/rokid-lumen-MIT.txt`.
+
 These scripts were exercised against Meta AI `269.1.0` (`948093709`) on an iPhone 8 running iOS `16.7.16`, using Frida `17.5.1` on the Mac. The installed app manifest declares minimum iOS `15.2`. Other builds may have different classes or methods.
 
 Use the Frida CLI: it includes the Objective-C bridge needed by the inspection and Bluetooth scripts. The Frida observers do not initiate Bluetooth connections or send protocol commands. Attaching and hooking still adds overhead and may affect app behavior. The direct Mac probe below actively connects and sends its documented queries.
@@ -13,7 +74,7 @@ python3 instrumentation/mac_band_probe.py BAND_COREBLUETOOTH_UUID \
   --seconds 35 --output captures/mac-probe.jsonl
 ```
 
-The probe reads the advertised L2CAP PSM and supports parameter-3 and parameter-26 transport. Without an owner key it offers mask 27 and chooses TX 26 when available (otherwise 3). With `--identity-key`, it offers mask 31, chooses TX 27 when available, and completes enrolled-owner trust before input requests. RX 3 and 26 are accepted. On firmware `5c2b1ca1f73b+`, the enrolled-owner path has now delivered device info, motion, gestures, and raw EMG; see [the investigation](firmware-5c2b1ca1f73b.md). Whether owner authentication is strictly required on this firmware remains unproven: earlier unauthenticated tests were not controlled for competing connections and pairing state. Received ciphertext must pass its MAC before plaintext is logged. Capture files include session material and must remain local/ignored. An existing output file is never overwritten.
+The probe reads the advertised L2CAP PSM and supports parameter-3 and parameter-26 transport. Without an owner key it offers mask 27 and chooses TX 26 when available (otherwise 3). With `--identity-key`, it offers mask 31, chooses TX 27 when available, and completes enrolled-owner trust before input requests. RX 3, 26, and 27 are accepted. On firmware `5c2b1ca1f73b+`, the enrolled-owner path has now delivered device info, motion, gestures, and raw EMG; see [the investigation](firmware-5c2b1ca1f73b.md). Whether owner authentication is strictly required on this firmware remains unproven: earlier unauthenticated tests were not controlled for competing connections and pairing state. Received ciphertext must pass its MAC before plaintext is logged. Capture files include session material and must remain local/ignored. An existing output file is never overwritten.
 
 For the parameter-26 investigation, use `--query-manifest` without
 `--end-link-setup` or stream options. It recognizes Constellation service `0x4f`,
@@ -265,3 +326,21 @@ temporarily changed from 1 to 0, bringing the radio to OFF. Keep the phone radio
 and glasses off while using the direct Mac connection. Restore the scan setting
 with `adb shell settings put global ble_scan_always_enabled 1` when returning
 to phone use, then enable Bluetooth normally.
+
+## Dashboard handwriting and current firmware checks (2026-10-19)
+
+Run `.venv/bin/python -m dashboard.server` and open `http://localhost:8765`.
+Select **Handwriting**, press **Start**, and wait for **Ready to write**. The panel
+shows live text, a literal-character view, sample/gap counts and Copy text.
+Only explicit space-class events insert spaces; blank duration is ignored.
+No spelling correction is applied. Start creates a fresh transcript. Stop and the
+five-minute limit restore the captured original settings before disconnecting;
+the worker allows the restoration deadline rather than killing it after five
+seconds. A lost link cannot guarantee restoration and is shown as unconfirmed.
+
+Live browser checks on firmware `7fada0507764+` confirmed owner authentication,
+handwriting readiness and restoration, 43 gesture events and 2,664 motion
+messages in hand/dial mode, and 56,336 raw EMG sample frames with no missing
+batches. Both legacy dashboard stream modes acknowledged disable. Unit tests
+cover curated handwriting output, stale/interrupted state, HTTP start, longer
+cleanup budgets, exact setting restoration, and explicit spaces and long blanks without inferred spacing. The latest research is recorded in [protocol.md](protocol.md#community-research-update--2026-10-19).

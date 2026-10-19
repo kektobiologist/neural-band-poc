@@ -5,7 +5,7 @@ let state = null;
 let activeTab = 'direct';
 let discoveryOptions = '';
 let connectionSetupShown = false;
-const clock = value => value ? new Date(value).toLocaleTimeString('en-US', {timeZone: 'America/New_York', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'}) : '—';
+const clock = value => value ? new Date(value).toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'}) : '—';
 const preciseClock = value => value ? `${clock(value)}.${String(new Date(value).getUTCMilliseconds()).padStart(3, '0')}` : '—';
 const bytes = value => new Intl.NumberFormat('en-US').format(value);
 const svgText = (x, y, text, anchor = 'middle', cls = '') => `<text x="${x}" y="${y}" text-anchor="${anchor}" class="${cls}">${text}</text>`;
@@ -49,8 +49,8 @@ function trafficChart(session) {
   if (!width) return;
   const height = 290, left = 62, right = 18, top = 24, bottom = 52;
   const plotWidth = Math.max(100, width - left - right), plotHeight = height - top - bottom;
-  const start = session.started_at ? Date.parse(session.started_at) : 0;
-  const end = state.running && state.phase === 'probing' ? Date.now() : Date.parse(session.last_event_at || session.started_at || 0);
+  const start = session.started_at ? Date.parse(session.started_at) : Date.now();
+  const end = state.running && state.phase === 'probing' ? Date.now() : session.last_event_at ? Date.parse(session.last_event_at) : start;
   const duration = Math.max(1, (end - start) / 1000);
   const bins = new Map();
   session.traffic.forEach(packet => {
@@ -138,7 +138,7 @@ function render() {
   $('connection').textContent = scanning ? 'Finding band' : state.phase === 'reading' && state.running ? 'Reading status' : session.connected ? 'Connected' : state.running ? 'Connecting' : 'Disconnected';
   $('connection-detail').textContent = session.connected ? 'Direct Mac → band' : state.running ? 'Check in progress' : 'No active listener';
   $('battery').textContent = device.battery == null ? '—' : `${device.battery}%`;
-  $('battery-detail').textContent = device.read_at ? `Read at ${clock(device.read_at)} EDT` : 'Read with a connection check';
+  $('battery-detail').textContent = device.read_at ? `Read at ${clock(device.read_at)}` : 'Read with a connection check';
   $('firmware').textContent = device.firmware || '—';
   $('verified').textContent = session.verified_packets;
   $('verified-detail').textContent = `${bytes(session.plaintext_bytes)} plaintext bytes · latest check`;
@@ -146,10 +146,11 @@ function render() {
   $('run-check').disabled = state.running || !state.can_check;
   $('start-session').disabled = state.running || !state.can_check;
   $('stream-mode').disabled = state.running;
-  if (state.running && ['dial', 'raw-emg'].includes(state.mode)) $('stream-mode').value = state.mode;
+  if (state.running && ['dial', 'raw-emg', 'handwriting'].includes(state.mode)) $('stream-mode').value = state.mode;
   $('stop-check').hidden = !state.running;
+  renderWriting();
   $('event-state').textContent = state.running ? 'LIVE CHECK' : 'RECORDED';
-  $('traffic-source').textContent = session.started_at ? `${state.running ? 'Current' : 'Saved'} check · ${clock(session.started_at)} EDT` : 'Run a check to collect traffic';
+  $('traffic-source').textContent = session.started_at ? `${state.running ? 'Current' : 'Saved'} check · ${clock(session.started_at)}` : 'Run a check to collect traffic';
   $('traffic-totals').textContent = `RECEIVED ${bytes(session.rx_bytes)} B  /  SENT ${bytes(session.tx_bytes)} B`;
   const deviceErrors = device.read_errors.length ? `Status read: ${device.read_errors.join('; ')}` : null;
   const notice = state.error || (scanning ? 'Finding nearby bands…' : state.external_check ? 'An experiment is recording from the band. Console controls will be available when it finishes.' : state.running ? state.phase === 'reading' ? 'Reading battery and firmware. The direct connection follows automatically.' : session.emg.enabled ? 'Live session active. Receiving directly from the band.' : 'Recording the direct connection.' : deviceErrors || (session.verified_packets ? 'Recording saved. This listener is disconnected.' : 'Ready to connect to the band.'));
@@ -170,7 +171,7 @@ function render() {
     });
     return tr;
   }));
-  $('updated').textContent = `Server reached ${clock(Date.now())} EDT`;
+  $('updated').textContent = `Server reached ${clock(Date.now())}`;
   const emg = session.emg;
   $('emg-state').textContent = emg.enabled ? 'STREAM ACTIVE' : emg.batches ? 'RECORDED' : 'NO SAMPLES';
   $('emg-summary').textContent = emg.config ? `${emg.config.channels} channels · ${bytes(emg.config.sample_rate)} Hz reported · ${bytes(emg.sample_frames)} received sample frames` : 'Sensor configuration not yet received';
@@ -222,3 +223,51 @@ new ResizeObserver(() => { if (state) activeTab === 'direct' ? trafficChart(stat
 new ResizeObserver(() => { if (state && activeTab === 'history') gestureChart(state.history); }).observe($('history-panel'));
 refresh();
 setInterval(refresh, 1000);
+
+let writing = {};
+function renderWriting() {
+  const selected = $('stream-mode').value === 'handwriting';
+  $('handwriting-panel').hidden = !selected;
+  document.querySelector('.interaction-panel').hidden = selected;
+  const phase = writing.phase || 'idle';
+  $('writing-state').textContent = writing.live ? 'READY TO WRITE' : phase === 'ready' ? 'WAITING FOR DATA' : phase.toUpperCase();
+  const labels = {
+    idle: 'Press Start, then wait for Ready before writing.',
+    connecting: 'Connecting to your band…',
+    preparing: 'Preparing handwriting. Keep the band on your wrist.',
+    ready: writing.live ? 'Write on a surface. Press Stop when you finish.' : 'Waiting for fresh samples…',
+    restoring: 'Finishing up and restoring the band’s previous settings…',
+    finished: writing.restored ? 'Recording saved. Band settings restored.' : 'Recording ended; band settings restoration was not confirmed.',
+    interrupted: 'Connection ended before restoration was confirmed. See session events.'
+  };
+  $('writing-help').textContent = writing.problem || labels[phase] || phase;
+  const text = writing.raw_text || writing.text;
+  const displayed = text || 'Your writing will appear here.';
+  if ($('writing-text').textContent !== displayed) $('writing-text').textContent = displayed;
+  $('writing-text').classList.toggle('empty', !text);
+  const raw = writing.raw_text || 'No characters yet.';
+  if ($('writing-raw').textContent !== raw) $('writing-raw').textContent = raw;
+  $('writing-stats').textContent = `${bytes(writing.samples || 0)} samples · ${bytes(writing.missing_samples || 0)} missing samples`;
+  $('copy-writing').disabled = !text;
+}
+async function refreshWriting() {
+  try {
+    const response = await fetch('/api/handwriting');
+    if (!response.ok) throw new Error('Handwriting status unavailable');
+    writing = await response.json();
+    renderWriting();
+  } catch (_) {
+    writing.live = false;
+    renderWriting();
+    if ($('stream-mode').value === 'handwriting') $('writing-help').textContent = 'Local server unavailable; text may be stale.';
+  }
+}
+$('stream-mode').addEventListener('change', renderWriting);
+$('copy-writing').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(writing.raw_text || writing.text || '');
+    $('copy-status').textContent = 'Copied';
+  } catch (_) { $('copy-status').textContent = 'Select the text above to copy it.'; }
+});
+refreshWriting();
+setInterval(refreshWriting, 250);

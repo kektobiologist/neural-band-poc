@@ -52,6 +52,10 @@ def session_view(rows, running=False):
               "identity_query_queued": "Certificate query queued", "device_info_query_queued": "Input-service query queued",
               "link_setup_end_queued": "Link setup completed", "config_query_queued": "Sensor configuration requested",
               "config_request_queued": "Band configuration requested",
+              "owner_trust_accepted": "Band accepted owner identity",
+              "handwriting_preparing": "Preparing handwriting",
+              "handwriting_ready": "Ready to write",
+              "handwriting_restoring": "Restoring band settings",
               "disconnected": "Bluetooth disconnected", "stream_ended": "Data channel closed"}
     for row in rows:
         event, at = row.get("event"), row.get("timestamp")
@@ -89,7 +93,10 @@ def session_view(rows, running=False):
             events.append({"at": at, "label": row["message"], "kind": "neutral"})
         elif event == "handedness_confirmed":
             events.append({"at": at, "label": f"Band hand confirmed: {row['hand']}", "kind": "verified"})
-        elif event in ("probe_error", "datax_incomplete", "handedness_failed"):
+        elif event == "handwriting_finished":
+            events.append({"at": at, "label": "Band settings restored" if row.get("restored") else "Band settings restoration unconfirmed",
+                           "kind": "verified" if row.get("restored") else "error"})
+        elif event in ("probe_error", "datax_incomplete", "handedness_failed", "handwriting_error"):
             events.append({"at": at, "label": row["message"], "kind": "error"})
     # The process owns the connection; saved logs cannot establish a live one.
     return {"connected": connected and running, "started_at": rows[0].get("timestamp") if rows else None,
@@ -163,7 +170,7 @@ class Dashboard:
         with self.lock:
             capture, running, phase, error, mode = self.capture, self.running, self.phase, self.error, self.mode
             discovery = {'devices': list(self.devices), 'scanned': self.scanned, 'selected': self.identifier}
-        if not running:
+        if not running and capture is None:
             saved = list(CAPTURES.glob("mac-band-probe-*.jsonl"))
             if saved:
                 capture = max(saved, key=lambda path: path.stat().st_mtime)
@@ -200,6 +207,24 @@ class Dashboard:
             view.update(engaged=False, fingers={"index": False, "middle": False})
         return view
 
+    def handwriting(self):
+        with self.lock:
+            capture, running, mode = self.capture, self.running, self.mode
+        data = read_json(capture.with_suffix(".live.json"), {}) if capture else {}
+        if data.get('event') != 'handwriting_state':
+            data = {}
+        at = data.get('timestamp')
+        age = time.time() - datetime.fromisoformat(at).timestamp() if at else float('inf')
+        active = running and mode == 'handwriting'
+        view = {k: data[k] for k in ('text', 'raw_text', 'samples', 'missing_samples', 'restored',
+                                    'problem', 'restore_errors', 'timestamp') if k in data}
+        phase = data.get('phase', 'connecting' if active else 'idle')
+        if not active and phase not in ('idle', 'finished'):
+            phase = 'interrupted'
+        view.update(phase=phase, live=active and phase == 'ready' and 0 <= age < 1,
+                    running=active, session=capture.name if capture else None)
+        return view
+
     def set_hand(self, hand):
         if hand not in (None, 'left', 'right'):
             raise ValueError('Choose left, right, or use the band setting')
@@ -225,7 +250,7 @@ class Dashboard:
             self.status_path.write_text('{}')
 
     def start(self, mode="dial"):
-        if mode not in ("check", "dial", "raw-emg", "scan"):
+        if mode not in ("check", "dial", "raw-emg", "handwriting", "scan"):
             raise ValueError("Unknown session mode")
         with self.lock:
             if self.running:
@@ -245,7 +270,7 @@ class Dashboard:
     def shutdown(self):
         self.stop.set()
         if self.worker:
-            self.worker.join(timeout=6)
+            self.worker.join(timeout=40)
 
     def _child(self, command, timeout):
         # Each Bluetooth subprocess gets a main thread and one hardware owner.
@@ -259,7 +284,7 @@ class Dashboard:
                     if self.stop.wait(0.1) or time.monotonic() > deadline:
                         process.send_signal(2)
                         try:
-                            process.wait(timeout=5)
+                            process.wait(timeout=38 if self.mode == "handwriting" else 5)
                         except subprocess.TimeoutExpired:
                             process.kill()
                             process.wait()
@@ -293,7 +318,7 @@ class Dashboard:
             with self.lock:
                 self.phase = "probing"
             command = [sys.executable, "-u", str(INSTRUMENTATION / "mac_band_probe.py"), self.identifier,
-                       "--seconds", "300" if mode == "dial" else "60" if mode == "raw-emg" else "30", "--end-link-setup", "--query-device-info",
+                       "--seconds", "300" if mode in ("dial", "handwriting") else "60" if mode == "raw-emg" else "30", "--end-link-setup", "--query-device-info",
                        "--query-config", "--output", str(self.capture)]
             identities = read_json(CAPTURES / "dashboard-identities.json", {})
             identity = identities.get(self.identifier) if isinstance(identities, dict) else None
@@ -305,7 +330,7 @@ class Dashboard:
                     command += ["--hand", self.requested_hand]
             if mode == "dial":
                 command += ["--dial-settings", str(self.dial_settings_path)]
-            result = self._child(command, 340 if mode == "dial" else 100 if mode == "raw-emg" else 40)
+            result = self._child(command, 410 if mode == "handwriting" else 340 if mode == "dial" else 100 if mode == "raw-emg" else 40)
             if result:
                 with self.lock:
                     self.error = "The encrypted check did not complete. See session events."
@@ -344,6 +369,8 @@ def make_handler(dashboard):
             route = urlparse(self.path).path
             if route == "/api/state":
                 return self.respond(200, dashboard.state())
+            if route == "/api/handwriting":
+                return self.respond(200, dashboard.handwriting())
             if route == "/api/interaction":
                 return self.respond(200, dashboard.interaction())
             assets = {"/": ("index.html", "text/html; charset=utf-8"),
@@ -381,8 +408,8 @@ def make_handler(dashboard):
                         dashboard.set_hand(settings['hand'])
                         return self.respond(200, {'requested_hand': dashboard.requested_hand})
                     if self.path == '/api/start':
-                        if not isinstance(settings, dict) or set(settings) != {'mode'} or settings['mode'] not in ('dial', 'raw-emg'):
-                            raise ValueError('Choose hand + dial or sEMG')
+                        if not isinstance(settings, dict) or set(settings) != {'mode'} or settings['mode'] not in ('dial', 'raw-emg', 'handwriting'):
+                            raise ValueError('Choose hand + dial, sEMG, or handwriting')
                         started = dashboard.start(settings['mode'])
                         return self.respond(202 if started else 409, {'started': started})
                     if self.path == '/api/select-band':

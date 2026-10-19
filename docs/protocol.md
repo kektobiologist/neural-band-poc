@@ -87,3 +87,166 @@ Local MAC verification established these record boundaries. These are **observat
 The public sample's fixed `00` byte after its eight-byte MAC therefore corresponds to **one ciphertext block** in these captures. Treating it as an arbitrary constant or metadata byte loses record boundaries for longer ciphertext. This correction comes from local authenticated packets; the cited public example happens to encrypt a 16-byte identity request.
 
 The live parameter-3 branch was authenticated in both directions: with `H = SHA256(S)`, `Kenc = HKDF-SHA256(IKM=H, salt=SHA256(H || C || R), info="AirShield", output=32)` and `Kmac = Kenc`. This supersedes the earlier candidate-only status of parameter 3. Session secrets are intentionally omitted here.
+
+## Community research update — 2026-10-19
+
+This update separates source-code evidence from tests on our band (firmware
+`7fada0507764+`). Earlier sections describe older firmware and historical findings.
+
+### Sources and lineage
+
+- **Zhuowei Zhang / Starcruiser and SimStella:** the earlier glasses work supplies
+  AirShield setup, crypto vectors and DataX schema. These are transport references,
+  not a complete consumer-band driver. [Starcruiser](https://github.com/zhuowei/Starcruiser-mac),
+  [SimStella](https://github.com/zhuowei/SimStella).
+- **Kinesis**, inspected at `5c78485f48c0758e2ce46ee11d3aaa070d827b75`, is the native
+  Swift continuation of this POC. Its enrollment code and newer handwriting code
+  are useful additions, but its older protocol document still describes parameter
+  3 and must not be treated as the latest firmware specification.
+  [Source](https://github.com/callbacked/kinesis/tree/5c78485f48c0758e2ce46ee11d3aaa070d827b75/Sources/KinesisCore).
+- **Air Gestures**, inspected at `7de74f049f636f059f98f35772598ea5121593c2`, ports
+  Kinesis into a Rust core and Linux/Android applications. Its hardware notes add
+  concrete observations on changing addresses, parameter 26 and channel flags.
+  [Hardware findings](https://gitlab.com/896kb/air-gestures/-/blob/7de74f049f636f059f98f35772598ea5121593c2/docs/hardware-day.md).
+- **Rokid Lumen**, inspected at `4fe237668683cbe7e613e3c0121723a9f176102a`, extends
+  that lineage with handwriting and a host-side writing assistant. Shared code is
+  not independent confirmation. Our direct Mac recordings provide local hardware
+  confirmation of the handwriting activation and output format.
+  [Band core](https://github.com/beyondlevi/rokid-lumen/tree/4fe237668683cbe7e613e3c0121723a9f176102a/rust/band-core/src).
+
+### Findings that refine our understanding
+
+**Pairing, enrollment and session authentication are different steps.** Kinesis
+implements a Meta-approved ownership ceremony as well as reconnecting with an
+existing owner key. The host proves ownership by signing the fresh session
+transcript; cloud enrollment is not necessary on every connection. Our dashboard
+uses the already-enrolled key recovered earlier and does not reset or re-enroll
+the band. Kinesis can additionally verify the band's proof when it has the band's
+identity public key. Our current owner-trust implementation does not perform that
+peer-identity verification. Encrypted packet MAC verification and the band accepting
+our owner key are not a substitute for that additional check.
+[Enrollment and trust](https://github.com/callbacked/kinesis/blob/5c78485f48c0758e2ce46ee11d3aaa070d827b75/docs/enrollment.md).
+
+**Bluetooth identifiers and channel flags can vary.** Air Gestures reports private
+advertising addresses changing after bond removal, and channel identifiers with
+additional connection-dependent bits, routed using `channel & 0x80ff`. It also
+observed full-block padding on aligned records and parameter-26 key derivation.
+These are specific hardware observations, not evidence that every band uses that
+routing mask. Our latest captures use ordinary channels and parameter 27 in both
+directions; they have not required a routing-mask change. The dashboard's saved
+CoreBluetooth UUID did become stale after re-pairing and was updated locally.
+[Hardware findings](https://gitlab.com/896kb/air-gestures/-/blob/7de74f049f636f059f98f35772598ea5121593c2/docs/hardware-day.md).
+
+**Charging can be queried over the input service.** Kinesis sends an empty
+`BatteryInfoReq` as RPC field 2, with a request ID in field 1, on a separately
+opened channel `0x8008`. Its decoder distinguishes an absent charging value from
+false. This is a concrete extension point for live battery status without another
+GATT connection; we have not tested this RPC on the current band. The dashboard
+currently uses the verified GATT battery and firmware read before streaming.
+[Request](https://github.com/callbacked/kinesis/blob/5c78485f48c0758e2ce46ee11d3aaa070d827b75/Sources/KinesisCore/BandSession.swift),
+[Decoder](https://github.com/callbacked/kinesis/blob/5c78485f48c0758e2ce46ee11d3aaa070d827b75/Sources/KinesisCore/BandBatteryStatus.swift).
+
+**The 100-class alphabet has a research source, not an official consumer protocol
+specification.** Meta's research `CharacterSet` orders ASCII letters, digits and
+punctuation, then backspace, enter, space, shift and `Key.pause`; the CTC null
+class follows. Consequently class 98's pinch glyph represents a pause key, not
+proof of emoji insertion. The research mapping also translates the right-arrow
+explicit-space gesture to underscore (class 88). Kinesis's wearer tests interpret
+88 as space and 87/98 as tentative boundaries. We retain that consumer
+interpretation, but have not validated every special action on this firmware.
+[Meta character mapping](https://github.com/facebookresearch/generic-neuromotor-interface/blob/main/generic_neuromotor_interface/handwriting_utils.py),
+[Kinesis decoder](https://github.com/callbacked/kinesis/blob/5c78485f48c0758e2ce46ee11d3aaa070d827b75/Sources/KinesisCore/ExperimentalHandwritingDecoder.swift).
+
+**Better host decoding need not discard runner-up letters.** Lumen's writing
+assistant preserves character distributions, averages repeated samples, searches
+lexicon candidates with substitution/insertion/deletion costs, and supports
+personal adaptation after confirmation. That gives a concrete route beyond our
+greedy decoder for confusions such as u/v or e/l. It is Lumen's implementation,
+not evidence of how Meta's app performs corrections. The dashboard deliberately
+keeps literal recognized characters and explicit space events; it does not
+silently apply a dictionary or the conversational guesses used in blind tests.
+[Distribution handling](https://github.com/beyondlevi/rokid-lumen/blob/4fe237668683cbe7e613e3c0121723a9f176102a/rust/writing/src/channel.rs),
+[Lexicon search](https://github.com/beyondlevi/rokid-lumen/blob/4fe237668683cbe7e613e3c0121723a9f176102a/rust/writing/src/search.rs).
+
+### Verified locally and still unknown
+
+The tested handwriting sequence discovers setting names, saves their values,
+enables streams 4/22/23, writes collection=1/model=5, and reads both back. Our
+setting IDs are **7/8**, not the reference devices' 27/28 or 28/29. Our original
+values are **0/4**, not the reference default model 2. Stopping restores these
+exact originals and verifies both reads and stream disable. Pipeline 3 carries
+100 little-endian float32 log-probabilities per sample at roughly 6.4 Hz.
+
+Four earlier writing recordings replay through the decoder without sequence gaps.
+The pause/blank-duration spacing hypothesis was rejected by the user. Its initial
+matches on two short phrases were not evidence of a protocol rule. The heuristic
+has been removed from the decoder and dashboard; only explicit space classes
+insert spaces. Meta's implicit word segmentation remains unknown.
+
+The reviewed sources do **not** settle the individual semantics of stream flags
+22/23, the complete meaning of boundary class 87 on consumer firmware, Meta's
+implicit word segmentation, emoji-picker messages, or the latest haptic command
+format. We have not claimed those gaps are solved. Next useful captures would
+compare explicit space/pause gestures, emoji selection in the official app, and
+handwriting entry/exit while observing both phone and band/glasses traffic.
+
+### Handwriting wire sequence and decoding
+
+The settings transaction sequence was adapted from [Lumen's model capture
+implementation](https://github.com/beyondlevi/rokid-lumen/blob/4fe237668683cbe7e613e3c0121723a9f176102a/rust/band-core/src/model_capture.rs),
+then verified on our firmware. It was not recovered from our incomplete phone
+capture. Kinesis is a community Mac application descended from this POC, not an
+official Meta SDK; the shared source lineage above matters when judging evidence.
+
+After the existing L2CAP/AirShield, owner-trust, and input-service setup:
+
+1. Use service `0xce56`, request type `0x02000314`, response `0x02000315` on
+   channel `0x8001`. RPC field 1 carries the request ID; arm 14 carries settings.
+   Its nested arm 1 queries count, arm 2 describes candidates, and arm 3 reads or
+   writes a setting. Discover `data-collection` and `data-collection-model` by
+   name. Candidate IDs from references are search hints only, never write targets
+   until the returned names match.
+2. Read and save **both** originals before writing anything. Our IDs were 7/8
+   and values 0/4. A protobuf zero may be omitted: read operation, success status,
+   and scalar value require the appropriate default-zero handling. The typed
+   value submessage must still exist. This fixed the initial failed preparation.
+3. On channel `0x8005`, enable input stream fields 4, 22, and 23 and check their
+   acknowledgement. Write collection=1 and model=5; read both back separately.
+   The individual meanings of 22 and 23 remain unverified.
+4. Require at least five valid pipeline-3 samples before reporting Ready and
+   starting the user capture timer. Do not treat a successful write alone as
+   proof that handwriting is streaming.
+5. On stop, restore the saved model and collection values (4 and 0 here), read
+   back both, then disable fields 4/22/23 and check the acknowledgement. Never
+   substitute reference firmware's model=2 for the saved original. Cleanup has
+   a bounded deadline; failed confirmation is an error, not a successful stop.
+
+Inference message `0x0200020c` contains protobuf field 1 (sequence), field 2
+(timestamp in microseconds), field 3 (packed little-endian float32 bytes), and
+field 10 (pipeline). Pipeline 3 supplies 100 log-probabilities about every
+156.25 ms (~6.4 Hz). We require finite nonpositive scores whose exponentials sum
+to approximately one, retain the distributions locally, and greedily select the
+largest score. The app displays recognized characters rather than claiming that
+the band sends complete UTF-8 sentences.
+
+| Class | Mapping used by our decoder |
+| --- | --- |
+| 0–25 | a–z |
+| 26–51 | A–Z |
+| 52–61 | 0–9 |
+| 62–93 | ASCII punctuation in Python `string.punctuation` order, with the exceptions below |
+| 87 | Boundary/control; no character emitted (consumer meaning not fully established) |
+| 88 | Explicit space, overriding the underscore slot |
+| 94 | Backspace |
+| 95 | Newline |
+| 96 | Explicit space |
+| 97 | Shift for the next emitted character |
+| 98 | Pause/boundary; no character emitted |
+| 99 | CTC blank |
+
+Greedy CTC collapses consecutive identical predictions and removes blanks. For
+example, top classes `7, 7, 99, 8, 99, 96, 99, 26` produce `hi A`: 7 is h,
+8 is i, 96 is an explicit space, and 26 is A. A blank between two identical
+letters permits both letters; its duration never creates a space. Special-class
+handling follows research/community mappings and is not a claim that all 100
+classes have been individually elicited on this consumer firmware.

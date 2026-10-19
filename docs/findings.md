@@ -1,5 +1,81 @@
 # Instrumented hardware sessions
 
+## Current milestone — October 19, 2026
+
+**Direct Mac handwriting and the dashboard work on firmware `7fada0507764+`.**
+The band accepted an existing enrolled-owner key, negotiated AirShield parameter
+27 in both directions, and delivered handwriting pipeline 3. The dashboard now
+supports handwriting alongside gesture/pinch control and raw EMG. Earlier
+sections below remain a historical record of different devices and firmware.
+
+### Connection and capture findings
+
+- On a OnePlus 10 Pro running Android 15 and Meta AI `294.1.0.25.165`, discovery
+  failed alongside hardware scan-filter `MEMORY_CAPACITY_EXCEEDED (0x07)` errors.
+  Disabling `com.heytap.accessory` and cycling Bluetooth off/on restored band
+  discovery and pairing in this session. The accessory service remains disabled
+  at the wearer's request. This did not eliminate glasses
+  `CONNECTION_TIMEOUT (0x08)` disconnects; no Bluetooth stack crash was observed.
+- The app's band setup was under the device-page **+ → Meta Ray-Ban Display →
+  Pair band instead**. Holding the band button for about three seconds produced
+  rapid white pairing flashes; the earlier solid green indication was battery
+  status, not pairing. UI placement and timing can vary with app/firmware.
+- On the Mac, `Encryption is insufficient` occurred before AirShield setup.
+  Forgetting only the stale Mac Bluetooth bond and pairing again fixed it while
+  preserving Meta owner enrollment. The saved CoreBluetooth identifier then
+  needed updating locally; a previously saved identifier is not always reusable.
+- Current-build Android instrumentation recovered the enrolled owner signing
+  material. A direct Mac probe confirmed owner acceptance and device-info/config
+  responses. The probe now accepts RX parameter 27; derivation and MAC checking
+  already supported it. It does not yet verify the band's identity signature.
+  Owner acceptance and packet integrity are distinct from mutual identity proof.
+- The phone tutorial recording contained 138 reassembled authenticated band
+  messages, two observer read errors, and a glasses timeout. It did not reveal an
+  identified handwriting stream. A phone observer cannot directly see the
+  band-to-glasses connection. Telemetry such as `handwriting_enabled=false` was
+  not sufficient to infer the band's active mode.
+- The ordinary inference configuration was pipeline 1, three floats, stride 72.
+  It must not be interpreted using the older nine-logit assumption or confused
+  with handwriting's 100-class pipeline 3.
+
+Owner keys, session material, app binaries, recordings, and the adapted Android
+observer stay in ignored `captures/`. The committed Android observer targets its
+older documented build; native offsets must be revalidated for each app build.
+
+### Handwriting evidence and corrections
+
+The activation sequence came from community source code, especially Rokid Lumen's
+`model_capture.rs`, followed by local hardware verification. It was not extracted
+from the incomplete phone tutorial recording. See the [wire sequence and source
+lineage](protocol.md#handwriting-wire-sequence-and-decoding).
+
+The first idle check received 69 samples without gaps and emitted no text. The
+following direct Mac recordings also had no sequence gaps, and each finished with
+saved settings restored and stream disable confirmed:
+
+| Trial | Samples | Literal greedy transcript | Interpretation limits |
+| --- | ---: | --- | --- |
+| Labeled phrase | 249 | `thisiswild.` | Wearer wrote “this is wild” and explicitly added the period. Spatial separation of words did not produce explicit spaces here. |
+| Blind 1 | 279 | `iloveyouastra` | Word segmentation was a conversational interpretation, not received space events. |
+| Blind 2 | 264 | `apooruaiscrazy!!!!` | “Apoorva is crazy!!!!” was an unconfirmed guess; the ambiguous sample favored u (52.1%) over v (8.1%). |
+| Blind 3 | 268 | `eoveyouappy` | “love you appy” was an unconfirmed guess; the ambiguous sample favored e (56.9%) over l (21.1%). A question mark followed by backspace was also observed. |
+
+These are protocol/decoder checks, not a controlled accuracy benchmark. We do not
+know all intended blind phrases. The pause/blank-duration spacing hypothesis was
+rejected by the wearer and removed from code and UI. Long blanks do not insert
+spaces; only explicit space classes do. Meta's implicit word segmentation and
+emoji-picker protocol remain unknown. No dictionary corrections are applied.
+
+Live dashboard checks on this firmware verified handwriting readiness and
+restoration (45 samples in one run), gesture/motion delivery (43 gestures and
+2,664 motion records, including right-hand pinch dial control), and raw EMG
+(56,336 eight-channel frames at 2,048 Hz, no missing frames, stream disable
+acknowledged). The automated suite passes 84 instrumentation and six dashboard
+tests. Normal stop and SIGINT/SIGTERM request restoration; transport loss or a
+process crash can still prevent cleanup and must be reported as unconfirmed.
+
+## Historical sessions — September 2026
+
 September 13–14, 2026, New York time (capture timestamps below are September 14 UTC).
 
 ## Verified milestone

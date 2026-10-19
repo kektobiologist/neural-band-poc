@@ -4,7 +4,7 @@ Uses fresh P-256 keys and the locally verified parameter-3 derivation. After
 setup, sends the empty identity query observed in Starcruiser's Datax.swift
 (commit 1bc6f9418ad85a10991817c74e15a84f85078f53, service 0x24 / type 0x3000).
 Certificate replies and raw-stream activation are verified on the tested band;
-full owner identity authentication is not established.
+enrolled-owner authentication and bounded handwriting mode are also supported.
 """
 
 import argparse
@@ -27,6 +27,7 @@ from analyze_capture import protobuf_fields, setup_summary
 from band_access import band_connection
 from input_service import InputService
 from owner_auth import OwnerTrust
+from handwriting import Handwriting
 
 
 STREAM_FIELDS = {"raw-emg": (2,), "dial": (3, 6, 8), "inference": (3, 4)}
@@ -64,6 +65,7 @@ class BandHandshake:
             raise ValueError("Owner trust and manifest diagnostic are separate modes")
         self.owner = OwnerTrust(identity_key, emit) if identity_key is not None else None
         self.startup_sent = False
+        self.handwriting = Handwriting(emit, self.handwriting_request, clock) if stream_control == "handwriting" else None
         self.constellation = ConstellationDiagnostic(emit, request_manifest=True) if query_manifest else None
         self.clock = clock
         self.requested_hand = hand
@@ -89,8 +91,16 @@ class BandHandshake:
         self.rpc_channels = set()
         self.tx_keys = None
         self.tx_parameters = None
-        self.stream_fields = STREAM_FIELDS.get(stream_control, (2,))
+        self.stream_fields = (4, 22, 23) if self.handwriting else STREAM_FIELDS.get(stream_control, (2,))
         self.input_service = InputService(self.receive_input, requested_fields=self.stream_fields)
+
+    def handwriting_request(self, channel, payload):
+        if channel in self.rpc_channels:
+            frame = len(payload).to_bytes(2, "big") + channel.to_bytes(2, "big") + payload
+        else:
+            self.rpc_channels.add(channel)
+            frame = typed_frame(channel, [0x8100ce56, 0x02000314], payload)
+        self.rpc_outgoing.extend(self.encrypt_frame(frame))
 
     def request_config(self, stage):
         self.config_id += 1
@@ -119,6 +129,8 @@ class BandHandshake:
         if self.config_request and self.clock() >= self.config_request[2]:
             self.fail_hand("Band hand confirmation timed out")
         self.input_service.tick()
+        if self.handwriting:
+            self.handwriting.tick()
 
     def receive_input(self, event, **data):
         self.emit(event, **data)
@@ -210,7 +222,9 @@ class BandHandshake:
             self.emit("device_info_query_queued", service=0xce56, message_type=0x314)
         if self.query_config:
             outgoing.extend(self.request_config("read"))
-        if self.stream_control:
+        if self.handwriting:
+            self.handwriting.start()
+        elif self.stream_control:
             outgoing.extend(self.stream_request(0x8005, 2))
             if self.stream_control in STREAM_FIELDS and not self.inference_start_pending:
                 outgoing.extend(self.stream_request(0x8005, 3, True))
@@ -254,8 +268,8 @@ class BandHandshake:
                            + field(4, self.base) + field(5, self.tx_parameters))
                 outgoing.extend(typed_frame(1, [0x02000002], payload))
             else:
-                if self.peer_request is None or fields.get(5, 0) not in (3, 26):
-                    raise ValueError(f"unexpected peer enable or parameters (band enabled {fields.get(5)}; implemented modes are 3 and 26)")
+                if self.peer_request is None or fields.get(5, 0) not in (3, 26, 27):
+                    raise ValueError(f"unexpected peer enable or parameters (band enabled {fields.get(5)}; implemented RX modes are 3, 26 and 27)")
                 if fields[1] != self.peer_request[1]:
                     raise ValueError("peer changed public key between request and enable")
                 peer_key = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), b"\x04" + fields[1])
@@ -293,6 +307,8 @@ class BandHandshake:
                         if self.owner.ready:
                             outgoing.extend(self.start_services())
                     self.input_service.feed(record.plaintext)
+                    if self.handwriting:
+                        self.handwriting.feed(record.plaintext)
                 else:
                     self.emit("unauthenticated_record", kind=record.kind, channel=record.channel, payload=record.payload.hex())
         outgoing.extend(self.rpc_outgoing)
@@ -396,7 +412,7 @@ def run_probe(args, emit):
                                        query_manifest=getattr(args, "query_manifest", False),
                                        identity_key=serialization.load_pem_private_key(args.identity_key.read_bytes(), None) if getattr(args, "identity_key", None) else None)
     central = CBCentralManager.alloc().initWithDelegate_queue_(delegate, None)
-    deadline = time.monotonic() + args.seconds
+    deadline = time.monotonic() + (95 if args.stream_control == "handwriting" else args.seconds)
     stop_queued = False
     recording_started = False
     stop_requested = False
@@ -406,6 +422,7 @@ def run_probe(args, emit):
         stop_requested = True
         stopping = True
     previous_signal = signal.signal(signal.SIGINT, stop_signal)
+    previous_term = signal.signal(signal.SIGTERM, stop_signal)
     # Active sensor recording is user work; opt out of App Nap for this session.
     process_info = NSProcessInfo.processInfo()
     activity = process_info.beginActivityWithOptions_reason_(NSActivityUserInitiatedAllowingIdleSystemSleep,
@@ -426,8 +443,20 @@ def run_probe(args, emit):
                 except (OSError, ValueError, TypeError) as error:
                     raise ValueError(f"Invalid local dial settings: {error}") from error
             delegate.handshake.tick()
+            delegate.outgoing.extend(delegate.handshake.rpc_outgoing)
+            delegate.handshake.rpc_outgoing.clear()
+            handwriting = delegate.handshake.handwriting
+            if handwriting and handwriting.phase == "ready" and not recording_started and not stopping:
+                recording_started = True
+                deadline = now + args.seconds + 35
+                emit("recording_started", duration_seconds=args.seconds, mode="handwriting")
+            if handwriting and handwriting.phase == "finished":
+                break
+            if handwriting and (stop_requested or now >= deadline - 35) and handwriting.phase not in ("idle", "restoring", "finished"):
+                handwriting.stop()
+                deadline = now + 36
             if stop_requested:
-                deadline = min(deadline, time.monotonic() + 3)
+                deadline = min(deadline, time.monotonic() + (36 if handwriting else 3))
                 stop_requested = False
             NSRunLoop.currentRunLoop().runUntilDate_(NSDate.dateWithTimeIntervalSinceNow_(0.002))
             if delegate.failure:
@@ -486,6 +515,12 @@ def run_probe(args, emit):
              inference_messages=delegate.handshake.input_service.inference_messages,
              other_messages=delegate.handshake.input_service.other_messages,
              hand=delegate.handshake.hand, hand_error=delegate.handshake.hand_error)
+        if delegate.handshake.handwriting:
+            hw = delegate.handshake.handwriting
+            if not hw.restored:
+                raise ValueError("Handwriting settings restoration was not confirmed; saved originals are in the capture")
+            if hw.problem or not hw.samples:
+                raise ValueError(hw.problem or "No handwriting samples received")
         delegate.handshake.input_service.finish()
         if args.hand is not None and delegate.handshake.hand != args.hand:
             raise ValueError(delegate.handshake.hand_error or "Requested band hand was not confirmed")
@@ -497,6 +532,7 @@ def run_probe(args, emit):
     finally:
         process_info.endActivity_(activity)
         signal.signal(signal.SIGINT, previous_signal)
+        signal.signal(signal.SIGTERM, previous_term)
         central.stopScan()
         if delegate.channel:
             for stream in (delegate.channel.inputStream(), delegate.channel.outputStream()):
@@ -517,8 +553,8 @@ if __name__ == "__main__":
     parser.add_argument("--query-manifest", action="store_true",
                         help="diagnose Constellation trust and request its manifest once; does not authenticate")
     parser.add_argument("--end-link-setup", action="store_true", help="send legacy EndLinkSetup (verified on parameter-3 firmware only)")
-    parser.add_argument("--stream-control", choices=("query", *STREAM_FIELDS),
-                        help="query flags, raw EMG, gestures/motion (dial), or experimental raw inference; disables requested streams before the deadline")
+    parser.add_argument("--stream-control", choices=("query", "handwriting", *STREAM_FIELDS),
+                        help="query flags, raw EMG, gestures/motion, raw inference, or handwriting; handwriting restores saved settings before disconnect")
     parser.add_argument("--query-config", action="store_true", help="read current input-service configuration; includes EndLinkSetup")
     parser.add_argument("--hand", choices=("left", "right"), help="set the band hand and verify it with a separate read; omitted keeps the band setting")
     parser.add_argument("--output", type=Path, required=True, help="new local JSONL capture; includes session material")
@@ -531,16 +567,17 @@ if __name__ == "__main__":
         args.query_config = True
     args.identifier = args.identifier.upper()
     with args.output.open("x") as capture:
+        os.chmod(args.output, 0o600)
         def emit(event, **details):
             row = {"event": event, "timestamp": datetime.now(timezone.utc).isoformat(), **details}
             capture.write(json.dumps(row) + "\n")
             capture.flush()
-            if event == "interaction_state":
+            if event in ("interaction_state", "handwriting_state"):
                 live = args.output.with_suffix(".live.json")
                 temporary = live.with_suffix(".tmp")
                 temporary.write_text(json.dumps(row))
                 temporary.replace(live)
-            if event not in ("session_material", "stream_bytes", "authenticated_packet", "unauthenticated_record", "emg_batch", "raw_emg_payload", "inference_sample", "raw_inference_payload", "gyro_sample", "orientation_sample", "input_message", "gesture", "interaction_state"):
+            if event not in ("session_material", "stream_bytes", "authenticated_packet", "unauthenticated_record", "emg_batch", "raw_emg_payload", "inference_sample", "raw_inference_payload", "handwriting_sample", "handwriting_state", "gyro_sample", "orientation_sample", "input_message", "gesture", "interaction_state"):
                 print(json.dumps(row), flush=True)
         try:
             with band_connection():

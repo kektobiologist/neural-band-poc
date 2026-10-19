@@ -131,7 +131,7 @@ class MacBandProbeTests(unittest.TestCase):
                 self.assertFalse(states[-1]['engaged'])
 
     def test_fragmented_exchange_and_independently_encrypted_peer_reply(self):
-        for mode in (3, 26):
+        for mode in (3, 26, 27):
             with self.subTest(mode=mode):
                 self.setUp()
                 self.check_fragmented_exchange(mode)
@@ -154,14 +154,14 @@ class MacBandProbeTests(unittest.TestCase):
         decoder.finish()
         self.assertEqual(decoded[0].plaintext.hex(), "800880028100002402003000c4c4c4c4")
         self.assertEqual(local_enable[1], our[1])
-        self.assertEqual(local_enable[5], mode)
+        self.assertEqual(local_enable[5], 26 if mode == 27 else mode)
 
         peer_keys = derive_keys(secret, our[2], self.peer_seed, mode)
         expected = bytes.fromhex("8004800203003000") + bytes([0xc8]) * 8
         cipher = Cipher(algorithms.AES(peer_keys.encryption), modes.CBC(self.peer_iv)).encryptor()
         ciphertext = cipher.update(expected) + cipher.finalize()
         body = b"\x00" + ciphertext
-        prefix = bytes.fromhex("02020000") if mode == 26 else b""
+        prefix = bytes.fromhex("02020000") if mode in (26, 27) else b""
         mac = hmac.new(peer_keys.mac, prefix + (42).to_bytes(4, "little") + body, hashlib.sha256).digest()[:8]
         self.assertEqual(self.probe.feed(b"\x40" + mac + body), b"")
         self.probe.finish()
