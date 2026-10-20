@@ -483,6 +483,8 @@ def run_probe(args, emit):
                     delegate.handshake.input_service.interaction.configure(**settings)
                 except (OSError, ValueError, TypeError) as error:
                     raise ValueError(f"Invalid local dial settings: {error}") from error
+            if stop_requested and hasattr(delegate.handshake, 'cancel_pending'):
+                delegate.handshake.cancel_pending()
             delegate.handshake.tick()
             delegate.outgoing.extend(delegate.handshake.rpc_outgoing)
             delegate.handshake.rpc_outgoing.clear()

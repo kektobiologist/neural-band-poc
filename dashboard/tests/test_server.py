@@ -14,6 +14,27 @@ from dashboard import server as dashboard_server
 
 
 class DashboardTests(unittest.TestCase):
+    def test_haptic_worker_and_public_status(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(dashboard_server, 'CAPTURES', Path(directory)):
+            root = Path(directory)
+            (root / 'dashboard-selected-band.json').write_text(json.dumps({'address': 'band-a'}))
+            (root / 'dashboard-identities.json').write_text(json.dumps({'band-a': '/private/owner.pem'}))
+            dashboard = dashboard_server.Dashboard()
+            dashboard.mode = 'haptics'
+            dashboard.capture = root / 'test.jsonl'
+            dashboard.capture.write_text(json.dumps({'event': 'haptic_reply', 'command': 'pulse',
+                                                    'accepted': True, 'plaintext': 'secret'}) + '\n')
+            commands = []
+            with patch.object(dashboard, '_child', side_effect=lambda command, timeout: commands.append(command) or 0):
+                dashboard._run('haptics')
+            self.assertEqual(len(commands), 1)
+            self.assertIn('haptic_probe.py', commands[0][2])
+            self.assertIn('/private/owner.pem', commands[0])
+            view = dashboard.state()
+            self.assertEqual(view['haptics'], [{'event': 'haptic_reply', 'command': 'pulse', 'accepted': True}])
+            self.assertNotIn('secret', json.dumps(view))
+            self.assertNotIn('/private/owner.pem', json.dumps(view))
+
     def test_identity_is_used_only_for_selected_band_and_not_exposed(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(dashboard_server, 'CAPTURES', Path(directory)):
             root = Path(directory)
@@ -109,6 +130,16 @@ class DashboardTests(unittest.TestCase):
                     self.assertEqual(probe[probe.index('--stream-control')+1], 'dial')
                     self.assertIn('--dial-settings', probe)
                     self.assertIsNone(request('/api/state')[1]['error'])
+                    params = {'amplitude': 511, 'duration': 500, 'count': 2, 'gap_ms': 350}
+                    for invalid in ({}, dict(params, count=3), dict(params, duration=True), dict(params, amplitude=1024)):
+                        self.assertEqual(request('/api/haptics', invalid)[0], 400)
+                    self.assertEqual(request('/api/haptics', params)[0], 202)
+                    settle()
+                    haptic = commands[-1]
+                    self.assertTrue(any(item.endswith('haptic_probe.py') for item in haptic))
+                    self.assertEqual(haptic[haptic.index('--amplitude') + 1], '511')
+                    self.assertEqual(haptic[haptic.index('--duration') + 1], '500')
+                    self.assertEqual(haptic[haptic.index('--count') + 1], '2')
                     for invalid in ({'hand':'ambidextrous'}, {'hand':True}, {'hand':'left','extra':1}, {}):
                         self.assertEqual(request('/api/hand', invalid)[0], 400)
                     self.assertEqual(request('/api/hand', {'hand':'left'}), (200, {'requested_hand':'left'}))

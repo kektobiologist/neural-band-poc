@@ -143,6 +143,7 @@ function render() {
   $('verified').textContent = session.verified_packets;
   $('verified-detail').textContent = `${bytes(session.plaintext_bytes)} plaintext bytes · latest check`;
   $('history-count').textContent = history.length;
+  renderHaptics();
   $('run-check').disabled = state.running || !state.can_check;
   $('start-session').disabled = state.running || !state.can_check;
   $('stream-mode').disabled = state.running;
@@ -188,7 +189,7 @@ async function refresh() {
     $('notice').textContent = `Local server unavailable: ${error.message}`;
     $('notice').classList.add('error');
     $('connection').textContent = 'Unknown'; $('connection-detail').textContent = 'Server connection lost';
-    $('run-check').disabled = true; $('start-session').disabled = true; $('scan-band').disabled = true; $('band-choice').disabled = true; $('updated').textContent = 'Readings may be stale';
+    $('test-haptic').disabled = $('test-haptic-double').disabled = $('test-haptic-four').disabled = true; $('haptic-status').textContent = 'Local server unavailable.'; $('run-check').disabled = true; $('start-session').disabled = true; $('scan-band').disabled = true; $('band-choice').disabled = true; $('updated').textContent = 'Readings may be stale';
   }
 }
 
@@ -271,3 +272,50 @@ $('copy-writing').addEventListener('click', async () => {
 });
 refreshWriting();
 setInterval(refreshWriting, 250);
+
+function renderHaptics() {
+  const busy = state.running || !state.can_check;
+  for (const id of ['test-haptic', 'test-haptic-double', 'test-haptic-four']) $(id).disabled = busy;
+  for (const id of ['haptic-amplitude', 'haptic-intensity-preset', 'haptic-duration', 'haptic-gap']) $(id).disabled = state.running;
+  if (state.mode !== 'haptics') {
+    $('haptic-status').textContent = state.running ? 'Stop the current session before testing.' : state.can_check ? 'Ready. Choose a buzz test or Compare 4 buzzes.' : 'Find and select an available band first.';
+    return;
+  }
+  const events = state.haptics || [];
+  const error = events.find(e => e.event === 'probe_error');
+  const sent = events.filter(e => e.event === 'haptic_pulse_sent');
+  const countdown = events.find(e => e.event === 'haptic_countdown');
+  const replies = events.filter(e => e.event === 'haptic_reply');
+  const count = countdown?.settings?.count || 1;
+  let message = 'Connecting… Keep your hand still.';
+  if (countdown) message = `Get ready: pulse in ${Math.max(0, Math.ceil((Date.parse(countdown.send_at) - Date.now()) / 1000))} seconds…`;
+  if (sent.length) message = `Pulse ${sent.at(-1).pulse} of ${count} sent at ${preciseClock(sent.at(-1).timestamp)}, intensity ${sent.at(-1).amplitude}. Feel for the buzz.`;
+  const accepted = new Set(replies.filter(e => e.accepted).map(e => `${e.command}:${e.pulse}`));
+  if (replies.some(e => !e.accepted)) message = 'The band rejected a command. No successful test confirmed.';
+  else if (accepted.size === count * 2) message = `${count === 1 ? 'Pulse and stop' : `All ${count} pulses and stops`} acknowledged. Did you feel ${count === 1 ? 'a buzz' : `${count} buzzes`}?`;
+  if (events.some(e => e.event === 'haptic_cancelled')) message = 'Test cancelled. No more pulses will be sent.';
+  if (error || state.error) message = error?.message || state.error;
+  else if (!state.running && !sent.length) message = 'Test ended before a pulse was sent. Try again.';
+  if (countdown?.settings) message += ` Tested ${count === 4 ? `intensities ${(countdown.amplitudes || []).join(' → ')}` : `intensity ${countdown.settings.amplitude}`}, duration ${countdown.settings.duration}.`;
+  $('haptic-status').textContent = message;
+}
+$('haptic-amplitude').addEventListener('input', () => {
+  const value = $('haptic-amplitude').value;
+  $('haptic-amplitude-value').textContent = value;
+  $('haptic-intensity-preset').value = ['128', '255', '511', '767', '1023'].includes(value) ? value : '';
+});
+$('haptic-intensity-preset').addEventListener('change', () => {
+  const value = $('haptic-intensity-preset').value;
+  if (!value) return;
+  $('haptic-amplitude').value = value;
+  $('haptic-amplitude-value').textContent = value;
+});
+function testHaptics(count) {
+  $('test-haptic').disabled = $('test-haptic-double').disabled = $('test-haptic-four').disabled = true;
+  action('/api/haptics', {amplitude: Number($('haptic-amplitude').value),
+    duration: Number($('haptic-duration').value), count, gap_ms: Number($('haptic-gap').value)});
+}
+$('test-haptic').addEventListener('click', () => testHaptics(1));
+$('test-haptic-double').addEventListener('click', () => testHaptics(2));
+
+$('test-haptic-four').addEventListener('click', () => testHaptics(4));

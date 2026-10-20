@@ -12,6 +12,7 @@ import time
 from urllib.parse import urlparse
 from instrumentation.band_access import band_available
 from instrumentation.pinch_dial import PinchDial
+from instrumentation.haptic_settings import DEFAULT_HAPTICS, validate_haptics
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -137,6 +138,7 @@ class Dashboard:
         self.running = False
         self.requested_hand = None
         self.mode = "check"
+        self.haptic_settings = dict(DEFAULT_HAPTICS)
         self.phase = "idle"
         self.error = None
         self.process = None
@@ -182,7 +184,9 @@ class Dashboard:
                            "firmware": status.get("firmware"), "read_at": status.get("read_at"),
                            "psm": status.get("psm"), "read_errors": status.get("errors", [])},
                 "session": session_view(read_rows(capture), running=running and phase == "probing"),
-                "history": self.history}
+                "history": self.history,
+                "haptics": [{key: row[key] for key in ("event", "timestamp", "send_at", "command", "accepted", "message", "pulse", "count", "settings", "amplitude", "amplitudes") if key in row}
+                            for row in read_rows(capture) if row.get("event", "").startswith("haptic_") or row.get("event") == "probe_error"] if mode == "haptics" else []}
 
     def interaction(self):
         with self.lock:
@@ -249,9 +253,10 @@ class Dashboard:
             self.capture = None
             self.status_path.write_text('{}')
 
-    def start(self, mode="dial"):
-        if mode not in ("check", "dial", "raw-emg", "handwriting", "scan"):
+    def start(self, mode="dial", haptic_settings=None):
+        if mode not in ("check", "dial", "raw-emg", "handwriting", "scan", "haptics"):
             raise ValueError("Unknown session mode")
+        settings = validate_haptics(DEFAULT_HAPTICS if haptic_settings is None else haptic_settings) if mode == 'haptics' else None
         with self.lock:
             if self.running:
                 return False
@@ -259,6 +264,8 @@ class Dashboard:
                 raise ValueError("Find and select your band first")
             self.running, self.phase, self.error = True, "scanning" if mode == 'scan' else "reading", None
             self.mode = mode
+            if settings is not None:
+                self.haptic_settings = settings
             self.stop.clear()
             stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%f")
             if mode != 'scan':
@@ -310,6 +317,20 @@ class Dashboard:
                 with self.lock:
                     self.devices = discovery['devices']
                     self.scanned = True
+                return
+            if mode == 'haptics':
+                with self.lock:
+                    self.phase = 'probing'
+                command = [sys.executable, '-u', str(INSTRUMENTATION / 'haptic_probe.py'),
+                           self.identifier, '--output', str(self.capture)]
+                identity = read_json(CAPTURES / 'dashboard-identities.json', {}).get(self.identifier)
+                if identity:
+                    command += ['--identity-key', str(Path(identity).expanduser().resolve())]
+                for name, value in self.haptic_settings.items():
+                    command += ['--' + name.replace('_', '-'), str(value)]
+                if self._child(command, 30):
+                    with self.lock:
+                        self.error = 'Haptic test did not complete. Check the test status and retry.'
                 return
             self._child([sys.executable, str(INSTRUMENTATION / "read_band_status.py"), self.identifier,
                          "--output", str(self.status_path)], 45)
@@ -396,12 +417,15 @@ def make_handler(dashboard):
                 return self.respond(403, {"error": "Same-origin localhost requests only"})
             if self.headers.get("Content-Type") != "application/json":
                 return self.respond(415, {"error": "JSON required"})
-            if self.path in ("/api/dial-settings", "/api/select-band", "/api/start", "/api/hand"):
+            if self.path in ("/api/dial-settings", "/api/select-band", "/api/start", "/api/hand", "/api/haptics"):
                 try:
                     size = int(self.headers.get("Content-Length", "0"))
                     if not 0 < size <= 128:
                         raise ValueError("Invalid settings length")
                     settings = json.loads(self.rfile.read(size))
+                    if self.path == '/api/haptics':
+                        started = dashboard.start('haptics', validate_haptics(settings))
+                        return self.respond(202 if started else 409, {'started': started})
                     if self.path == '/api/hand':
                         if not isinstance(settings, dict) or set(settings) != {'hand'}:
                             raise ValueError('Provide a hand setting')

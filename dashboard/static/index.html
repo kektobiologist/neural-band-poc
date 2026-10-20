@@ -22,6 +22,19 @@
       <div class="hand-controls"><button id="scan-band" class="quiet-button" type="button">Find band</button><label for="band-choice">Band</label><select id="band-choice"><option value="">Choose a band</option></select><button id="run-check" class="quiet-button" type="button">Check connection</button></div>
       <p id="band-discovery-status" class="detail" role="status">No band selected yet.</p>
     </details>
+    <section class="connection-setup" aria-label="Haptic test">
+      <h2>Try a buzz</h2>
+      <p>Keep your hand still. Choose your settings, then wait for the connection and three-second countdown.</p>
+      <div class="hand-controls">
+        <label for="haptic-amplitude">Intensity value</label><input id="haptic-amplitude" type="range" min="1" max="1023" step="1" value="128"><output id="haptic-amplitude-value" for="haptic-amplitude">128</output>
+        <label for="haptic-intensity-preset">Compare intensity</label><select id="haptic-intensity-preset"><option value="" disabled>Custom</option><option value="128" selected>128 · original</option><option value="255">255 · previous limit</option><option value="511">511</option><option value="767">767</option><option value="1023">1023 · test limit</option></select>
+        <label for="haptic-duration">Duration value</label><select id="haptic-duration"><option value="50">50</option><option value="150" selected>150 · original test</option><option value="300">300</option><option value="500">500</option><option value="1000">1000</option></select>
+        <label for="haptic-gap">Gap between buzzes</label><select id="haptic-gap"><option value="50">50 ms</option><option value="100" selected>100 ms · quick double</option><option value="350">350 ms</option><option value="700">700 ms</option><option value="1000">1 second</option></select>
+      </div>
+      <div class="hand-controls"><button id="test-haptic" type="button" disabled>Single buzz</button><button id="test-haptic-double" type="button" class="secondary" disabled>Double buzz</button><button id="test-haptic-four" type="button" class="secondary" disabled>Compare 4 buzzes: 128 → 255 → 256 → 384</button></div>
+      <p id="haptic-status" role="status" aria-live="polite">Waiting for the local server…</p>
+      <p class="detail">A weak buzz was confirmed at intensity 128 and duration 150. The four-buzz test compares 128 → 255 → 256 → 384 at a fixed duration. Feel for whether the third pulse disappears and the fourth feels like the first. Higher values may be clamped or interpreted differently; 1023 is an experimental test limit, not a verified device maximum. The intensity scale and duration units are not yet confirmed; these values are not percentages or milliseconds. Double buzz and the four-intensity comparison stop each pulse after 150 ms, then wait the selected gap before repeating. Bluetooth replies can add delay. Single buzz retains a 1.5-second stop limit.</p>
+    </section>
     <section class="stats" aria-label="Latest band readings">
       <div class="stat"><span class="label">Connection</span><strong id="connection">Disconnected</strong><span id="connection-detail" class="detail">No active listener</span></div>
       <div class="stat"><span class="label">Battery</span><strong id="battery">—</strong><span id="battery-detail" class="detail">No reading yet</span></div>

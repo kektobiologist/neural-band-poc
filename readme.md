@@ -22,6 +22,8 @@ open [localhost:8765](http://localhost:8765). put the band in pairing mode, hit 
 
 pick hand + dial for gestures, or semg for raw readings. hand sessions run for up to five minutes; semg runs for a minute. stop ends the session. captures stay local.
 
+the **Try a buzz** panel sends client-controlled haptic feedback, including quick double buzzes and a four-intensity comparison. [haptics controls, protocol, and test results](docs/haptics.md).
+
 left wrist works too. choose your band hand before starting, or leave it on use band setting. it checks the setting on the band and adjusts the dial direction. [wire details and cli](docs/handedness.md).
 
 ## what would be cool
