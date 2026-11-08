@@ -30,7 +30,7 @@ from owner_auth import OwnerTrust
 from handwriting import Handwriting
 
 
-STREAM_FIELDS = {"raw-emg": (2,), "dial": (3, 6, 8), "inference": (3, 4)}
+STREAM_FIELDS = {"raw-emg": (2,), "raw-emg-motion": (2, 6, 8), "dial": (3, 6, 8), "inference": (3, 4)}
 
 
 def varint(value):
@@ -642,7 +642,8 @@ if __name__ == "__main__":
     with args.output.open("x") as capture:
         os.chmod(args.output, 0o600)
         def emit(event, **details):
-            row = {"event": event, "timestamp": datetime.now(timezone.utc).isoformat(), **details}
+            row = {"event": event, "timestamp": datetime.now(timezone.utc).isoformat(),
+                   "host_monotonic_ns": time.monotonic_ns(), **details}
             capture.write(json.dumps(row) + "\n")
             capture.flush()
             if event in ("interaction_state", "handwriting_state"):

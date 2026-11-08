@@ -1,0 +1,12 @@
+# Install alongside the repository requirements on the Mac used for capture.
+numpy>=1.26,<3
+opencv-contrib-python>=4.10,<5
+mediapipe>=0.10.20,<0.11
+torch>=2.5,<3
+
+# Offline feature baselines and motion fusion
+scikit-learn>=1.5,<2
+
+# Official Meta model configuration import and transfer preprocessing
+omegaconf>=2.3,<3
+scipy>=1.14,<2

@@ -11,14 +11,18 @@ setup and everyday use are in the [main readme](../readme.md). commands in these
 - [capture tools](capture-tools.md): direct mac commands and optional phone instrumentation.
 - [public integrations](public-integrations.md): a dated look at meta's glasses and research APIs.
 - [gesture models](gesture-models.md): the on-band model's score stream, its nine output labels, and what the app reveals about it.
+- [pinch learning experiments](pinch-learning.md): webcam labeling, personal EMG CNN, motion fusion, Meta checkpoint transfer, failed live tests, weight audit, and reproduction commands.
 
 ## code and checks
 
 `dashboard/` holds the server, static frontend, and console tests. `instrumentation/` holds the band clients, protocol code, and phone capture tools.
+`learning/` holds personal pinch recording, labels, datasets, training, and live
+comparison. Install `learning/requirements.txt` for those optional ML dependencies.
 
 ```sh
 python3 -m unittest discover -s instrumentation -p 'test_*.py'
 python3 -m unittest discover -s dashboard/tests -p 'test_*.py'
+python3 -m unittest discover -s learning/tests -v
 node dashboard/tests/test_gesture_animation.mjs
 node dashboard/tests/test_hand_model.mjs
 ruff check instrumentation dashboard
@@ -30,7 +34,7 @@ ruff check instrumentation dashboard
 - validate gesture directions and relative wrist axes with labeled trials.
 - reduce dropped data and shutdown failures. combined semg/gesture framing is still unresolved; the console uses separate modes.
 - establish haptic duration units and native pattern support; client-triggered buzzes now work.
-- ring/pinky recognition would need labeled semg data and a separate classifier.
+- improve the experimental personal pinch classifiers: reject artifacts, use robust normalization, and evaluate across independently recorded band placements. Current ring/pinky results are not a reliable live controller.
 - activate the `thumb_tap` output live and find the app code that reads the native label table. see [gesture models](gesture-models.md).
 
 the superseded clients and early text exports are in [git history](https://github.com/callbacked/neural-band-poc/tree/36b99eaf37ffd7a6116e563744457bfdd52e1af6).
