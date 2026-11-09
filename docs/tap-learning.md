@@ -33,7 +33,7 @@ The owner identity comes from the saved Keychain registry, as for every probe
 connection ([Mac enrollment](mac-enrollment.md)); `--identity-key` overrides it.
 Defaults: index, middle, ring, pinky and rest, 12 cues each.
 The terminal shows `TAP thumb + RING` with a bell; tap once quickly and relax.
-On `stay relaxed`, do nothing. Ctrl-C aborts (aborted sessions are rejected).
+On `stay relaxed`, do nothing. Ctrl-C stops early; the cues before it are still analyzed.
 Custom gestures: `--gestures ring pinky fist` (names are only labels and cues).
 
 Pacing is live. The first 5 s of rest calibrate each channel's resting level;
@@ -113,6 +113,20 @@ of a similar within-session score on a fresh wear. **Step 0 answer:** the band's
 three scores separate index, middle and pinky taps from rest, but ring taps look
 like middle taps, so ring needs our own EMG model. Record more sessions with
 re-wears and check leave-one-session-out before trusting the EMG number.
+
+### Second session, first cross-session check
+
+`taps-20261109-06` used live pacing and was stopped after 38 of 60 cues (clean
+stream shutdown, zero missing EMG). Mean cue spacing was 1.96 s versus 2.25 s
+fixed; 36/38 cues were kept offline (live pacing flagged 4 misses, 3 of which
+the offline detector still accepted).
+
+Leave-one-session-out over sessions 05 and 06 (balanced accuracy): band scores
+67.8%, EMG features 49.2%. The within-session 90% does not survive a new
+session, as with the Nov 7 pinches. With only two sessions each model trains on
+one; a quick normalization comparison gave rest-mean subtraction 49.2%, none
+57.8%, rest mean and std 53.0%, per-session z-score of all taps 64.5%. Too few
+sessions to choose; re-run the comparison with four or more.
 
 ## Next
 

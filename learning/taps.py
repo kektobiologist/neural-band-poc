@@ -131,8 +131,9 @@ def label_taps(x, t0, cues, hi=4., lo=2., search=(.1, 1.6), quiet=.3):
 
 def session_features(session, hi=4., lo=2.):
     session = Path(session)
-    if json.loads((session / 'session.json').read_text())['status'] != 'complete':
-        raise ValueError(f'{session}: session is not complete')
+    # A Ctrl-C stop still disables the stream cleanly; every logged cue before it is whole.
+    if json.loads((session / 'session.json').read_text())['status'] not in ('complete', 'aborted'):
+        raise ValueError(f'{session}: session failed; inspect probe.log')
     rows = read_rows(session / 'band.jsonl')
     cues = read_rows(session / 'cues.jsonl')
     x, t0 = emg_grid(rows)
