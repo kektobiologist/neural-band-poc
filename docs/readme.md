@@ -11,9 +11,9 @@ setup and everyday use are in the [main readme](../readme.md). commands in these
 - [handedness](handedness.md): the native hand setting, read-back checks, and dial direction.
 - [capture tools](capture-tools.md): current Mac capture commands and offline analysis.
 - [public integrations](public-integrations.md): a dated look at meta's glasses and research APIs.
-- [gesture models](gesture-models.md): the on-band model's score stream, its nine output labels, and what the app reveals about it.
+- [gesture models](gesture-models.md): the on-band model's score stream, its nine output labels (current firmware streams three scores, see tap learning), and what the app reveals about it.
 - [pinch learning experiments](pinch-learning.md): webcam labeling, personal EMG CNN, motion fusion, Meta checkpoint transfer, failed live tests, weight audit, and reproduction commands.
-- [tap learning](tap-learning.md): cue-only tap recording with EMG-onset labels, the band-model-score probe for ring/pinky taps, and leave-one-session-out evaluation.
+- [tap learning](tap-learning.md): cue-only tap recording with EMG-onset labels, live-paced cues, the band-model-score probe for ring/pinky taps (ring looks like middle), leave-one-session-out results from the first two sessions, and data-collection ideas.
 
 ## code and checks
 
@@ -36,7 +36,7 @@ ruff check instrumentation dashboard
 - validate gesture directions and relative wrist axes with labeled trials.
 - reduce dropped data and shutdown failures. combined semg/gesture framing is still unresolved; the console uses separate modes.
 - establish haptic duration units and native pattern support; client-triggered buzzes now work.
-- improve the experimental personal pinch classifiers: reject artifacts, use robust normalization, and evaluate across independently recorded band placements. Current ring/pinky results are not a reliable live controller.
+- improve the experimental personal pinch classifiers: reject artifacts, use robust normalization, and evaluate across independently recorded band placements. Current ring/pinky results are not a reliable live controller. For taps, collect many short sessions across rewears first; see [tap learning](tap-learning.md).
 - activate the `thumb_tap` output live and find the app code that reads the native label table. see [gesture models](gesture-models.md).
 
 the superseded clients and early text exports are in [git history](https://github.com/callbacked/neural-band-poc/tree/36b99eaf37ffd7a6116e563744457bfdd52e1af6).

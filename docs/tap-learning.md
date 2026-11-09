@@ -10,18 +10,27 @@ the [webcam pinch experiments](pinch-learning.md) failed live. Three changes:
 - **Many short sessions across rewears**, scored leave-one-session-out, with a
   per-session rest calibration. The Nov 7 failure was cross-session drift.
 
-One real session so far ([results](#first-session-november-9)); one session cannot show cross-session reliability.
+Status after two real sessions ([results](#first-session-november-9)): recording,
+live pacing and labelling work. Within one session EMG features reach 90%
+balanced accuracy over index, middle, ring, pinky and rest; across the two
+sessions that falls to 49%. The band's own scores cannot tell ring from middle.
+Collecting many more band placements is the open work ([next](#next)).
 
 ## Step 0: do the band's own model scores already separate ring/pinky?
 
-The band streams nine scores from its on-device model (see
-[gesture models](gesture-models.md)). `--stream-control raw-emg-inference`
-requests raw EMG (field 2) and those scores (field 4) on one subscription. It
-leaves out gesture events (field 3), because an earlier combined run broke when a
-gesture record arrived mid-frame ([findings](findings.md)). **Whether EMG and
-scores stream together reliably is itself untested**: check `probe.log` for missing
-batches and `probe_result.inference_messages > 0`. If scores never arrive, try
+The band streams scores from its on-device model: nine on older firmware (see
+[gesture models](gesture-models.md)), three on the current one. The decoder
+takes the count from the band's inference config. `--stream-control
+raw-emg-inference` requests raw EMG (field 2) and those scores (field 4) on one
+subscription. It leaves out gesture events (field 3), because an earlier
+combined run broke when a gesture record arrived mid-frame
+([findings](findings.md)). EMG and scores streamed together with zero missing
+batches in both real sessions. On other firmware, check `probe.log` for missing
+batches and `probe_result.inference_messages > 0`; if scores never arrive, try
 `(2, 3, 4)` in `STREAM_FIELDS`, or record with `--stream raw-emg` and skip step 0.
+
+**Answer:** no. Index, middle and pinky taps separate from rest, but ring taps
+score like middle taps, so ring needs our own EMG model.
 
 ## Record
 
@@ -130,8 +139,25 @@ sessions to choose; re-run the comparison with four or more.
 
 ## Next
 
-If step 0 separates the classes, a classifier on the nine scores is the cheapest
-path, because Meta already made them robust across sessions. Otherwise, once
+Data collection is the bottleneck, and the scarce thing is band placements, not
+taps: ten 30-second sessions after ten rewears teach more than one long session.
+Ideas for collecting more, cheapest first (none built yet):
+
+1. **Voice prompts, self-paced blocks.** macOS `say` speaks "ring, five"; the
+   wearer taps five times and the burst detector counts them. Roughly 0.5–0.7 s
+   per tap instead of 2 s, and no screen, so arm position can vary. Needs the
+   analyzer to label several bursts per cue. A 45-second mode could run on every
+   rewear.
+2. **Fingertip contact sensors.** Conductive tape on the thumb and fingertips,
+   wired to ESP32-S3 touch pins, gives exact press and release labels with no
+   prompts at all. Needs the ESP32's timestamps aligned with the Mac clock.
+3. **Unlabelled background recording** during normal wear, for false triggers
+   per minute and each placement's resting signal. Needs the probe's 300 s limit
+   lifted or captures chained; about 115 MB per hour.
+4. **Labels from use**, once a model is usable: each trigger is an example and
+   an undo marks a wrong one.
+
+With four or more sessions, re-run the normalization comparison. Once
 leave-one-session-out accuracy is decent, add live two-stage inference (burst
 detector, then classifier, with confidence rejection) and measure false triggers
 per minute during typing, walking and holding objects.
