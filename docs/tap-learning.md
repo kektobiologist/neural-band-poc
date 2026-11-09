@@ -29,6 +29,8 @@ batches and `probe_result.inference_messages > 0`. If scores never arrive, try
 python -m learning.tap_record BAND_UUID --output captures/taps-20261110-01
 ```
 
+The owner identity comes from the saved Keychain registry, as for every probe
+connection ([Mac enrollment](mac-enrollment.md)); `--identity-key` overrides it.
 Defaults: index, middle, ring, pinky and rest, 12 cues each, one cue every
 2–2.5 s (jittered so you react instead of keeping rhythm), about 2.5 minutes.
 The terminal shows `TAP thumb + RING` with a bell; tap once quickly and relax.

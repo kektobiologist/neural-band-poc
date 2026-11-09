@@ -51,7 +51,7 @@ def main():
     parser.add_argument('--jitter', type=float, default=.5, help='Extra random seconds between cues')
     parser.add_argument('--stream', choices=('raw-emg-inference', 'raw-emg'), default='raw-emg-inference',
                         help='raw-emg-inference adds the band model scores')
-    parser.add_argument('--identity-key', type=Path)
+    parser.add_argument('--identity-key', help='Keychain reference or PEM override; defaults to the saved band identity')
     args = parser.parse_args()
     if 'rest' in args.gestures or len(set(args.gestures)) != len(args.gestures):
         parser.error('gesture names must be unique and not "rest"')
