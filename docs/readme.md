@@ -2,20 +2,21 @@
 
 setup and everyday use are in the [main readme](../readme.md). commands in these notes run from the repo root. capture filenames refer to the local, ignored `captures/` folder.
 
+- [Mac connection and enrollment](mac-enrollment.md): current identity, setup, and recovery.
 - [findings](findings.md): hardware results, verified derivations, stream captures, and known failures.
 - [home-control handoff](home-control-handoff.md): appliance-control goals, solid-state hardware decisions, shopping candidates, and remaining feasibility work (2026-10-01).
 - [protocol](protocol.md): public schemas, pinned source code, and framing references.
 - [gestures](gestures.md): the supplied video references and how the hand illustrates them.
 - [haptics](haptics.md): client-triggered buzzes, quick sequences, console/CLI use, and verified limits.
 - [handedness](handedness.md): the native hand setting, read-back checks, and dial direction.
-- [capture tools](capture-tools.md): direct mac commands and optional phone instrumentation.
+- [capture tools](capture-tools.md): current Mac capture commands and offline analysis.
 - [public integrations](public-integrations.md): a dated look at meta's glasses and research APIs.
 - [gesture models](gesture-models.md): the on-band model's score stream, its nine output labels, and what the app reveals about it.
 - [pinch learning experiments](pinch-learning.md): webcam labeling, personal EMG CNN, motion fusion, Meta checkpoint transfer, failed live tests, weight audit, and reproduction commands.
 
 ## code and checks
 
-`dashboard/` holds the server, static frontend, and console tests. `instrumentation/` holds the band clients, protocol code, and phone capture tools.
+`dashboard/` holds the server, static frontend, and console tests. `instrumentation/` holds the Mac enrollment/connection clients, protocol code, and offline decoders.
 `learning/` holds personal pinch recording, labels, datasets, training, and live
 comparison. Install `learning/requirements.txt` for those optional ML dependencies.
 

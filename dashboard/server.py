@@ -14,7 +14,10 @@ from instrumentation.band_access import band_available
 from instrumentation.pinch_dial import PinchDial
 from instrumentation.haptic_settings import DEFAULT_HAPTICS, validate_haptics
 
+from instrumentation.band_identity import resolve_identity
+
 HERE = Path(__file__).resolve().parent
+
 ROOT = HERE.parent
 CAPTURES = ROOT / "captures"
 INSTRUMENTATION = ROOT / "instrumentation"
@@ -323,9 +326,9 @@ class Dashboard:
                     self.phase = 'probing'
                 command = [sys.executable, '-u', str(INSTRUMENTATION / 'haptic_probe.py'),
                            self.identifier, '--output', str(self.capture)]
-                identity = read_json(CAPTURES / 'dashboard-identities.json', {}).get(self.identifier)
+                identity = resolve_identity(self.identifier, CAPTURES)
                 if identity:
-                    command += ['--identity-key', str(Path(identity).expanduser().resolve())]
+                    command += ['--identity-key', identity]
                 for name, value in self.haptic_settings.items():
                     command += ['--' + name.replace('_', '-'), str(value)]
                 if self._child(command, 30):
@@ -341,10 +344,9 @@ class Dashboard:
             command = [sys.executable, "-u", str(INSTRUMENTATION / "mac_band_probe.py"), self.identifier,
                        "--seconds", "300" if mode in ("dial", "handwriting") else "60" if mode == "raw-emg" else "30", "--end-link-setup", "--query-device-info",
                        "--query-config", "--output", str(self.capture)]
-            identities = read_json(CAPTURES / "dashboard-identities.json", {})
-            identity = identities.get(self.identifier) if isinstance(identities, dict) else None
+            identity = resolve_identity(self.identifier, CAPTURES)
             if identity:
-                command += ["--identity-key", str(Path(identity).expanduser().resolve())]
+                command += ["--identity-key", identity]
             if mode != "check":
                 command += ["--stream-control", mode]
                 if self.requested_hand is not None:

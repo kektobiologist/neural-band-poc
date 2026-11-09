@@ -1,14 +1,18 @@
-"""Create a private, ignored firmware header from the already enrolled owner PEM."""
+"""Create a private, ignored firmware header from the already enrolled owner identity."""
 import argparse
 import os
+import sys
 from pathlib import Path
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "instrumentation"))
+from band_identity import load_identity
+
 p = argparse.ArgumentParser(description=__doc__)
-p.add_argument('pem', type=Path)
+p.add_argument('identity')
 a = p.parse_args()
-key = serialization.load_pem_private_key(a.pem.read_bytes(), password=None)
+key = load_identity(a.identity)
 if not isinstance(key, ec.EllipticCurvePrivateKey) or not isinstance(key.curve, ec.SECP256R1):
     p.error('Owner key must be P-256')
 private = key.private_numbers().private_value.to_bytes(32, 'big')

@@ -4,12 +4,19 @@ https://github.com/user-attachments/assets/4fc157bc-b579-480d-971b-bae8bdbb86fa
 
 live sEMG readings from a meta neural band connected directly to a mac. no glasses or phone needed for the streams tested here.
 
+Need a fresh owner identity without Android? The new [Mac enrollment command](docs/mac-enrollment.md)
+opens Meta sign-in, enrolls a locally generated Keychain identity, and checks it on a fresh
+connection before updating the dashboard. Enrollment and fresh-connection owner
+trust were validated on Meta Band 00Z9 on November 9, 2026.
+
 there's a local console with eight channels, a 3d gesture hand, and a pinch and roll dial. you can find and connect the band from there too.
 
 ## run it
 
 macos + python 3.11. allow bluetooth access for the terminal when asked.
-unpair your neural band from the app, and run the pairing process again, for the console to pick up
+reuse the enrolled owner key from the shared macOS Keychain registry; ordinary
+connections do not need unpairing, a reset, Android, or another Meta login.
+for a missing/rejected identity, follow the [Mac connection and recovery guide](docs/mac-enrollment.md).
 
 ```sh
 python3 -m venv .venv

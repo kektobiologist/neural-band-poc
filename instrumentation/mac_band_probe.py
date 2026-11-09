@@ -1,10 +1,9 @@
-"""Direct macOS band connection and bounded AirShield/input-service experiments.
+"""Direct macOS band connection with an enrolled owner PEM.
 
-Uses fresh P-256 keys and the locally verified parameter-3 derivation. After
-setup, sends the empty identity query observed in Starcruiser's Datax.swift
-(commit 1bc6f9418ad85a10991817c74e15a84f85078f53, service 0x24 / type 0x3000).
-Certificate replies and raw-stream activation are verified on the tested band;
-enrolled-owner authentication and bounded handwriting mode are also supported.
+Use --identity-key for normal connections. Create or recover an owner identity
+with enroll_band.py; see docs/mac-enrollment.md. The transport negotiates
+AirShield parameters 3, 26 and 27. The no-key identity query remains the
+bootstrap used by enrollment, not the normal sensor connection workflow.
 """
 
 import argparse
@@ -18,10 +17,10 @@ import signal
 import time
 
 from cryptography.hazmat.primitives.asymmetric import ec
+from band_identity import load_identity, resolve_identity
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-from constellation_auth import ConstellationDiagnostic
 from airshield import AuthenticatedPacket, StreamDecryptor, derive_keys
 from analyze_capture import protobuf_fields, setup_summary
 from band_access import band_connection
@@ -57,16 +56,13 @@ def typed_frame(channel, words, payload=b""):
 
 class BandHandshake:
     def __init__(self, emit, query_device_info=False, end_link_setup=False, stream_control=None, query_config=False,
-                 hand=None, clock=time.monotonic, query_manifest=False, identity_key=None):
+                 hand=None, clock=time.monotonic, identity_key=None):
         if hand not in (None, "left", "right"):
             raise ValueError("Hand must be left or right")
         self.emit = emit
-        if identity_key is not None and query_manifest:
-            raise ValueError("Owner trust and manifest diagnostic are separate modes")
         self.owner = OwnerTrust(identity_key, emit) if identity_key is not None else None
         self.startup_sent = False
         self.handwriting = Handwriting(emit, self.handwriting_request, clock) if stream_control == "handwriting" else None
-        self.constellation = ConstellationDiagnostic(emit, request_manifest=True) if query_manifest else None
         self.clock = clock
         self.requested_hand = hand
         self.hand = self.hand_error = None
@@ -249,7 +245,7 @@ class BandHandshake:
         outgoing = bytearray()
         if self.end_link_setup:
             # Observed EndLinkSetup shape, with a fresh local link UUID.
-            # Verified for the older parameter-3 device-info exchange only.
+            # Used by the verified enrolled-owner startup on parameter 27 too.
             end = typed_frame(0x8001, [0x02001000], field(1, 1) + field(2, os.urandom(16)) + (field(3, os.urandom(16)) if self.owner is not None else b"" ))
             outgoing.extend(self.encrypt_frame(end))
             self.emit("link_setup_end_queued", state=1)
@@ -336,9 +332,6 @@ class BandHandshake:
                 if isinstance(record, AuthenticatedPacket):
                     self.authenticated_packets += 1
                     self.emit("authenticated_packet", counter=record.counter, plaintext=record.plaintext.hex())
-                    if self.constellation is not None:
-                        for channel, word in self.constellation.feed(record.plaintext):
-                            outgoing.extend(self.encrypt_frame(typed_frame(channel, [word])))
                     if self.owner is not None:
                         for channel, words, payload in self.owner.feed(record.plaintext):
                             outgoing.extend(self.encrypt_frame(typed_frame(channel, words, payload)))
@@ -361,23 +354,25 @@ class BandHandshake:
             self.owner.frames.finish()
             if not self.owner.ready:
                 raise ValueError("Owner trust/link setup incomplete")
-        if self.constellation is not None:
-            self.constellation.finish()
 
 
-def run_probe(args, emit):
-    # CoreBluetooth stays on the main thread. Keeping these imports here also
-    # permits deterministic protocol tests without a macOS Bluetooth runtime.
-    from Foundation import (NSObject, NSRunLoop, NSDate, NSUUID, NSDefaultRunLoopMode,
-                            NSProcessInfo, NSActivityUserInitiatedAllowingIdleSystemSleep)
-    from CoreBluetooth import CBCentralManager, CBUUID
+_mac_delegate_class = None
+
+
+def mac_delegate_class():
+    """Register the Objective-C delegate once; enrollment reconnects in-process."""
+    global _mac_delegate_class
+    if _mac_delegate_class is not None:
+        return _mac_delegate_class
+    from Foundation import NSObject, NSRunLoop, NSUUID, NSDefaultRunLoopMode
+    from CoreBluetooth import CBUUID
 
     class MacBandDelegate(NSObject):
         def centralManagerDidUpdateState_(self, central):
-            emit("bluetooth_state", state=int(central.state()))
+            self.emit("bluetooth_state", state=int(central.state()))
             if central.state() != 5:
                 return
-            known = central.retrievePeripheralsWithIdentifiers_([NSUUID.alloc().initWithUUIDString_(args.identifier)])
+            known = central.retrievePeripheralsWithIdentifiers_([NSUUID.alloc().initWithUUIDString_(self.identifier)])
             if known:
                 self.peripheral = known[0]
                 central.connectPeripheral_options_(self.peripheral, None)
@@ -385,13 +380,13 @@ def run_probe(args, emit):
                 central.scanForPeripheralsWithServices_options_(None, None)
 
         def centralManager_didDiscoverPeripheral_advertisementData_RSSI_(self, central, peripheral, advertisement, rssi):
-            if str(peripheral.identifier().UUIDString()) == args.identifier:
+            if str(peripheral.identifier().UUIDString()) == self.identifier:
                 self.peripheral = peripheral
                 central.stopScan()
                 central.connectPeripheral_options_(peripheral, None)
 
         def centralManager_didConnectPeripheral_(self, central, peripheral):
-            emit("connected", name=str(peripheral.name()))
+            self.emit("connected", name=str(peripheral.name()))
             peripheral.setDelegate_(self)
             peripheral.discoverServices_([CBUUID.UUIDWithString_("FEB8")])
 
@@ -399,7 +394,7 @@ def run_probe(args, emit):
             self.failure = f"connection failed: {error}"
 
         def centralManager_didDisconnectPeripheral_error_(self, central, peripheral, error):
-            emit("disconnected", error=str(error) if error else None)
+            self.emit("disconnected", error=str(error) if error else None)
             self.disconnected = True
 
         def peripheral_didDiscoverServices_(self, peripheral, error):
@@ -426,7 +421,7 @@ def run_probe(args, emit):
                 return
             # ponytail: the band advertises its PSM here (255 on older firmware, 129 on 5c2b1ca1f73b+); trust it.
             psm = int.from_bytes(value, "little")
-            emit("psm_discovered", psm=psm)
+            self.emit("psm_discovered", psm=psm)
             peripheral.openL2CAPChannel_(psm)
 
         def peripheral_didOpenL2CAPChannel_error_(self, peripheral, channel, error):
@@ -438,17 +433,31 @@ def run_probe(args, emit):
                 stream.scheduleInRunLoop_forMode_(NSRunLoop.currentRunLoop(), NSDefaultRunLoopMode)
                 stream.open()
             self.outgoing.extend(self.handshake.request())
-            emit("l2cap_open", psm=int(channel.PSM()))
+            self.emit("l2cap_open", psm=int(channel.PSM()))
 
-    delegate = MacBandDelegate.alloc().init()
+    _mac_delegate_class = MacBandDelegate
+    return _mac_delegate_class
+
+
+def run_probe(args, emit, handshake=None):
+    # CoreBluetooth stays on the main thread. Keeping these imports here also
+    # permits deterministic protocol tests without a macOS Bluetooth runtime.
+    from Foundation import (NSRunLoop, NSDate, NSDefaultRunLoopMode,
+                            NSProcessInfo, NSActivityUserInitiatedAllowingIdleSystemSleep)
+    from CoreBluetooth import CBCentralManager
+
+    delegate = mac_delegate_class().alloc().init()
+    delegate.emit = emit
+    delegate.identifier = args.identifier
     delegate.peripheral = delegate.channel = delegate.failure = None
     delegate.disconnected = False
     delegate.outgoing = bytearray()
-    delegate.handshake = BandHandshake(emit, query_device_info=args.query_device_info,
+    identity_ref = None if handshake is not None else (
+        getattr(args, "identity_key", None) or resolve_identity(args.identifier, Path(__file__).resolve().parent.parent / "captures"))
+    delegate.handshake = handshake if handshake is not None else BandHandshake(emit, query_device_info=args.query_device_info,
                                        end_link_setup=args.end_link_setup, stream_control=args.stream_control,
                                        query_config=args.query_config, hand=args.hand,
-                                       query_manifest=getattr(args, "query_manifest", False),
-                                       identity_key=serialization.load_pem_private_key(args.identity_key.read_bytes(), None) if getattr(args, "identity_key", None) else None)
+                                       identity_key=load_identity(identity_ref) if identity_ref else None)
     central = CBCentralManager.alloc().initWithDelegate_queue_(delegate, None)
     deadline = time.monotonic() + (95 if args.stream_control == "handwriting" else args.seconds)
     stop_queued = False
@@ -488,6 +497,8 @@ def run_probe(args, emit):
             delegate.handshake.tick()
             delegate.outgoing.extend(delegate.handshake.rpc_outgoing)
             delegate.handshake.rpc_outgoing.clear()
+            if getattr(delegate.handshake, 'complete', False) and not delegate.outgoing:
+                break
             handwriting = delegate.handshake.handwriting
             if handwriting and handwriting.phase == "ready" and not recording_started and not stopping:
                 recording_started = True
@@ -617,10 +628,8 @@ if __name__ == "__main__":
     parser.add_argument("--seconds", type=float, default=35, help="time limit; sensor modes start a fresh interval when samples arrive")
     parser.add_argument("--dial-settings", type=Path, help="local JSON response/sensitivity settings, watched during gesture modes")
     parser.add_argument("--query-device-info", action="store_true", help="read input-service metadata; pair with --end-link-setup")
-    parser.add_argument("--identity-key", type=Path, help="local PEM for an already enrolled P-256 band identity; never enrolls or resets")
-    parser.add_argument("--query-manifest", action="store_true",
-                        help="diagnose Constellation trust and request its manifest once; does not authenticate")
-    parser.add_argument("--end-link-setup", action="store_true", help="send legacy EndLinkSetup (verified on parameter-3 firmware only)")
+    parser.add_argument("--identity-key", help="Keychain reference or PEM override; defaults to the saved band identity")
+    parser.add_argument("--end-link-setup", action="store_true", help="complete link setup; automatic with an owner key or stream mode")
     parser.add_argument("--stream-control", choices=("query", "handwriting", *STREAM_FIELDS),
                         help="query flags, raw EMG, gestures/motion, raw inference, or handwriting; handwriting restores saved settings before disconnect")
     parser.add_argument("--query-config", action="store_true", help="read current input-service configuration; includes EndLinkSetup")

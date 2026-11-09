@@ -82,7 +82,7 @@ python -m learning.record BAND_UUID --hand right \
 python -m learning.dataset captures/pinch-pilot
 ```
 
-Allow camera/Bluetooth permission if macOS requests it. `--identity-key path.pem`
+Allow camera/Bluetooth permission if macOS requests it. `--identity-key KEYCHAIN_REFERENCE`
 passes an existing enrolled identity to the driver. The recorder does not enroll
 or reset the band, or change its handedness setting.
 

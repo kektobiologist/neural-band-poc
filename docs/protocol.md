@@ -4,7 +4,28 @@ Checked September 13, 2026 (local date). Read-only research; no device calls. Lo
 
 ## Current local verification
 
-The public sources below supplied the starting schema and parameter-31 vectors. Subsequent hardware work now verifies both the band (parameters 3) and glasses (31): the latest complete capture authenticates **850 channel-zero packets** with independently derived keys matching the companion app. See [findings.md](findings.md) for the measured formulas, relay framing, capture files, and limits. Statements below about what the public repositories do not document remain limitations of those sources, not current blockers to phone-link decryption.
+Normal connections use the Mac-enrolled Keychain identity; see [the connection guide](mac-enrollment.md).
+`airshield.py` implements verified parameters 3, 26, 27 and 31. The direct Mac
+client negotiates 3/26/27; 31 remains for offline glasses-capture decoding.
+The November 9, 2026 owner-authenticated raw-EMG check used parameter 27.
+Earlier public sources supplied the starting schema and parameter-31 vectors;
+limitations of those sources are not current connection blockers.
+
+For one direction, let S be the raw P-256 shared secret, C the receiver's
+challenge, R the sender's seed, and H = SHA256(S). HKDF uses SHA256, info
+`AirShield`, and length 32:
+
+| Parameters | Encryption key | MAC key | MAC prefix |
+| --- | --- | --- | --- |
+| 3 | HKDF(H, salt=SHA256(H || C || R)) | encryption key | empty |
+| 26, 27 | HKDF(S, salt=SHA256(C || R)) | encryption key | `02 02 00 00` |
+| 31 | HKDF(S, salt=SHA256(C || R)) | HKDF(S, salt=SHA256(R || C || "hmac_derive")) | `02 02 00 00` |
+
+The MAC input is `prefix || LE32(counter) || block_count_minus_1 || ciphertext`;
+the wire uses the first eight HMAC-SHA256 bytes. Verify before releasing AES-CBC
+plaintext, then advance the IV to the final ciphertext block and increment the
+32-bit counter. These are implemented parameter values, not a general rule for
+unobserved capability bits.
 
 ## Decisive public lead
 
@@ -120,8 +141,8 @@ This update separates source-code evidence from tests on our band (firmware
 implements a Meta-approved ownership ceremony as well as reconnecting with an
 existing owner key. The host proves ownership by signing the fresh session
 transcript; cloud enrollment is not necessary on every connection. Our dashboard
-uses the already-enrolled key recovered earlier and does not reset or re-enroll
-the band. Kinesis can additionally verify the band's proof when it has the band's
+reuses the current Mac-enrolled key. The separate enrollment command provisions
+a replacement only when setup/recovery is needed. Kinesis can additionally verify the band's proof when it has the band's
 identity public key. Our current owner-trust implementation does not perform that
 peer-identity verification. Encrypted packet MAC verification and the band accepting
 our owner key are not a substitute for that additional check.
@@ -299,7 +320,7 @@ are not established here. The first test leaves them unchanged.
 
 ```sh
 python instrumentation/mac_band_probe.py BAND_UUID \
-  --identity-key LOCAL_OWNER_PEM --query-device-info \
+  --query-device-info \
   --stream-control dial --seconds 90 --standby-after 15 \
   --output captures/standby-trial-UNIQUE.jsonl
 ```

@@ -1,7 +1,7 @@
-"""Observed legacy owner trust, opt-in with an already enrolled P-256 identity.
+"""Owner trust for connections using an enrolled P-256 identity.
 
 The acknowledgement proves the peer accepted our identity; it does not verify
-peer identity. No enrollment, reset, or Constellation manifest installation.
+peer identity. Enrollment is handled separately by enroll_band.py.
 """
 import hashlib
 from cryptography.hazmat.primitives import hashes

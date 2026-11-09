@@ -4,14 +4,16 @@ this page is the implementation guide for the band's `enabletrust` exchange.
 it is written for a port author: every constant, field, and ordering rule
 below comes from working code and verified hardware sessions. read
 [protocol.md](protocol.md) first for the transport handshake; the trust
-handshake runs on top of it.
+handshake runs on top of it. Operational setup and identity recovery are in
+[mac-enrollment.md](mac-enrollment.md).
 
 ## when it runs
 
 the handshake replaces the legacy empty identity query (`0x02003000`) on a
 connection to an enrolled band. it runs once per connection, after the
-airshield exchange and before end link setup. the band does not open the
-input service until both directions trust each other.
+airshield exchange and before end link setup. the client waits for owner acceptance and peer link setup before opening the
+input service. The current Python and ESP32 clients do not verify the band
+identity signature; do not describe this as mutual identity verification.
 
 two facts matter for reconnection logic:
 
@@ -51,6 +53,7 @@ frame:
 | words | `[0x81000024, 0x02001000]` |
 | payload field 1 | `SHA256` of the host identity public key's raw 64-byte point (32 bytes) |
 | payload field 2 | the host identity signature, 64 bytes raw `r||s`, over the digest with the band as receiver and the host as sender |
+| payload field 3 | role `2` used by the current client |
 
 `0x81000024` opens the identity service on the channel. it is only needed
 before the first identity exchange on that channel; a later `enable trust` on
@@ -87,24 +90,20 @@ proof:
 | payload field 2 | the band's signature, 64 bytes raw `r||s`, over the digest with the host as receiver and the band as sender |
 | payload field 3 | provisioning capabilities, observed value `1` |
 
-verification on the host side:
-
-- if the host stores the band identity public key, verify field 2 against it.
-  a wrong signature fails the connection before any acknowledgement.
-- if no band key is stored, there is nothing to verify against. band
-  acceptance is what matters.
-
-acknowledge a valid (or untestable) proof with `0x03001000` on the proof's
-low channel (`0x8003` → channel 3). never acknowledge a proof that failed
-verification against a stored band key.
+The current `OwnerTrust` implementation checks that field 2 is 64 bytes and
+acknowledges the proof with `0x03001000` on the low channel (`0x8003` → 3).
+It does not cryptographically verify the band signature. Enrollment retains an
+optional band public key for future verification work; its presence does not
+mean that verification is implemented.
 
 ## ordering and end link setup
 
-the band result and the band proof may arrive in either order. handle both.
-acknowledgements for the band proof go out at once, but end link setup waits
-until both directions are trusted.
+The host acknowledges the band's proof when received. `OwnerTrust.ready`
+requires both the host-identity acceptance result and the peer's `EndLinkSetup`
+message. The peer setup includes a 16-byte field 2 and state 0/1 in field 1
+(omitted state means 0). These two events may arrive in either order.
 
-once trusted both ways, the host sends end link setup:
+Once ready, the current host sends:
 
 | part | value |
 | --- | --- |
@@ -112,37 +111,17 @@ once trusted both ways, the host sends end link setup:
 | words | `[0x02001000]` |
 | payload field 1 | varint `1` |
 | payload field 2 | 16 fresh random bytes |
+| payload field 3 | another 16 fresh random bytes in enrolled-owner mode |
 
-the band acknowledges with `0x02001000` on `0x8001`, field 1 = `1` and field 2
-= 16 bytes. after that the flow rejoins the shared startup: device-info query
-on `0x8003` (`0x8100ce56`, `0x02000314`), the input subscription, the
-handedness read, then streams.
+Startup then queries device info on `0x8003` (`0x8100ce56`, `0x02000314`)
+and opens the requested input/configuration subscriptions.
 
-## failure handling
+## Failure handling
 
-- `0x03001043`: the stored host key is wrong for this band. surface it, drop
-  the connection, and forget the stored identity or re-enroll. a stale
-  identity must never block a band that would otherwise connect in pairing
-  mode.
-- any other `0x0300xxxx`: rejection. retry the connection; if it repeats, the
-  enrollment state and the stored key disagree.
-- duplicate band proof: a protocol error. the band sends at most one proof
-  per session.
-- a band proof signed by the wrong key (when a band key is stored): fail the
-  connection. do not acknowledge. do not send end link setup.
-
-## worked timeline
-
-one full enrolled startup, as observed:
-
-1. transport: host `RequestEncryption` (`0x8001`, `0x02000001`), band
-   `0x02000001`, host `EnableEncryption` (`0x02000002`), band `0x02000002`.
-   both sides now hold the shared secret.
-2. host sends `enable trust` on `0x8002` (one encrypted frame; enrolled mode
-   sends no empty identity query).
-3. band sends `0x03001000` on channel 2 and its `0x02001001` proof on
-   `0x8003`, in either order.
-4. host acks the proof with `0x03001000` on channel 3, then sends end link
-   setup on `0x8001`.
-5. band acks end link setup; host queries device info on `0x8003`; the input
-   subscription and handedness read follow; streams open.
+`0x03001043` rejects the stored host identity. Stop the connection and verify
+that the selected band's mapping points to the current Keychain identity. Preserve existing
+keys. If an enrollment attempt was interrupted, try its candidate with
+`enroll_band.py --verify-key` first. Use the Mac enrollment recovery flow only
+when needed; do not silently fall back to an unauthenticated sensor connection.
+Other rejection codes fail the connection and must be diagnosed by their actual
+meaning. A transport MAC failure is not an owner-key-expiry signal.

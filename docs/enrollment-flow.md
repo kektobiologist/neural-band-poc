@@ -1,6 +1,8 @@
 # enrollment flow
 
-one-time enrollment claims an unowned band and provisions an owner identity.
+enrollment provisions an owner identity using Meta-signed ownership receipts.
+Use [the Mac command](mac-enrollment.md) for setup/recovery; normal connections
+reuse the existing Keychain identity.
 it runs half on the ble link and half against the hardware graph. this page
 documents both halves: the https auth chain, the two `pair` routes, the ble
 ceremony steps, and the identity-service error map. the trust handshake that
@@ -20,13 +22,13 @@ the goal is a user access token in the `ar` universe. four form posts:
    `FRL|388177446008673|083800dd7efbbd42eab18c9886d79c18`. the response
    carries a native SSO token and an etoken. validated with http 200.
 2. open the auth url in a web view. the user signs in. the callback goes to
-   `fb-viewapp://frl_login` with `token = first16(sha256(native_sso_token))`
+   `fb-viewapp://frl_login` or `oculus://frl_login` with `token = first16(hex(sha256(native_sso_token)))`
    and a blob.
 3. post `https://meta.graph.meta.com/webview_blobs_decrypt`. form fields:
    `blob`, `request_token = native_sso_token`,
    `access_token = FRL|388177446008673|083800dd7efbbd42eab18c9886d79c18`,
-   `lsd = "S0." + 6 random digits`, `jazoest = "2" + digitSum(lsd)`.
-   the response carries the fro access token.
+   `lsd = "S0." + 6 random digits`, `jazoest = "2" + sum(Unicode scalar values of lsd)`.
+   the response carries the FRL access token.
 4. post `https://ar-genai.graph.meta.com/login`. form fields: `frl_access_token`,
    `logging_session_id = uuid`, `format = json`, `device_id = uuid`,
    `generate_session_cookies = 1`, `generate_analytics_claim = 1`,
@@ -94,7 +96,7 @@ that follows step 7.
    `0x02003001` carries a protobuf: field 1 = device certificate der
    (967 bytes), field 2 = serial (14 ascii bytes), field 5 = secondary
    certificate (889 bytes). store all three.
-2. skip challenge. send `[0x81000024, 0x02002000]` on a fresh channel. the
+2. skip challenge. send `[0x02002000]` on the already-open channel `0x8002`. the
    response `0x02002001` payload is `0a10` plus a 16-byte nonce.
 3. http `pair_request` (above).
 4. start change owner. send `[0x02002002]` with a protobuf payload:
@@ -118,12 +120,15 @@ that follows step 7.
 receipt strings are signed byte sequences. keep them verbatim. never
 reformat, reserialize, or re-indent the json before sending it to the band.
 
-## app key storage
+## App key storage
 
-generate a fresh p-256 key per enrollment attempt. store it in the keychain
-under the band identifier together with the band ec public key from the final
-receipt. later connections use the enrolled-startup path: the trust handshake
-replaces the empty identity query.
+The current Python command creates a fresh P-256 key per enrollment attempt and
+saves and reads it back in macOS Keychain before any ownership request.
+Recovery metadata is checkpointed before sending FinishChangeOwner.
+After the band confirms completion, a fresh connection must accept the key
+before its reference becomes active in the durable registry. The Meta session
+also lives in Keychain; non-secret recovery metadata remains in ignored files. See the
+[operational guide](mac-enrollment.md#storage-and-success) for exact locations.
 
 ## identity service error map
 
@@ -138,7 +143,7 @@ form is the low 16 bits below prefixed with `0x0300`.
 | `0x1044` | invalid signature |
 | `0x1045` | invalid time |
 | `0xd001` | unknown type |
-| `0xd004` | deserialize failed |
+| `0xd004` | bad type |
 | `0xd021` | deserialize failed (transport layer; see [research-report.md](research-report.md)) |
 | `0xc001` | service not found |
-| `0xc004` | parse failed |
+| `0xc004` | internal error |
