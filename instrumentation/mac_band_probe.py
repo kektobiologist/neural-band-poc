@@ -30,7 +30,8 @@ from owner_auth import OwnerTrust
 from handwriting import Handwriting
 
 
-STREAM_FIELDS = {"raw-emg": (2,), "raw-emg-motion": (2, 6, 8), "dial": (3, 6, 8), "inference": (3, 4)}
+STREAM_FIELDS = {"raw-emg": (2,), "raw-emg-motion": (2, 6, 8), "dial": (3, 6, 8), "inference": (3, 4),
+                 "raw-emg-inference": (2, 4)}  # no gestures (3): they broke combined framing, docs/findings.md
 
 
 def varint(value):
@@ -76,7 +77,7 @@ class BandHandshake:
         self.device_state_acknowledged = None
         self.standby_acknowledged = False
         self.rpc_outgoing = bytearray()
-        self.inference_start_pending = stream_control == "inference"
+        self.inference_start_pending = 4 in STREAM_FIELDS.get(stream_control, ())
         self.private = ec.generate_private_key(ec.SECP256R1())
         self.public = self.private.public_key().public_bytes(
             serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint)[1:]
@@ -90,7 +91,7 @@ class BandHandshake:
         self.query_device_info = query_device_info
         self.end_link_setup = identity_key is not None or end_link_setup or stream_control is not None or query_config or hand is not None
         self.stream_control = stream_control
-        self.query_config = query_config or stream_control in ("dial", "inference") or hand is not None
+        self.query_config = query_config or stream_control in ("dial", "inference", "raw-emg-inference") or hand is not None
         self.rpc_channels = set()
         self.tx_keys = None
         self.tx_parameters = None
@@ -594,7 +595,7 @@ def run_probe(args, emit):
             raise ValueError(delegate.handshake.hand_error or "Requested band hand was not confirmed")
         if args.stream_control in STREAM_FIELDS and not delegate.handshake.input_service.streams_disabled_acknowledged:
             raise ValueError("Disconnected without confirmation that all requested streams stopped")
-        if args.stream_control == "inference" and not delegate.handshake.input_service.inference_messages:
+        if 4 in STREAM_FIELDS.get(args.stream_control, ()) and not delegate.handshake.input_service.inference_messages:
             raise ValueError("No supported inference samples were received; inspect the saved responses and payloads")
         return bool(delegate.handshake.authenticated_packets)
     finally:

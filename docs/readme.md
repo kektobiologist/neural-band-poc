@@ -12,6 +12,7 @@ setup and everyday use are in the [main readme](../readme.md). commands in these
 - [public integrations](public-integrations.md): a dated look at meta's glasses and research APIs.
 - [gesture models](gesture-models.md): the on-band model's score stream, its nine output labels, and what the app reveals about it.
 - [pinch learning experiments](pinch-learning.md): webcam labeling, personal EMG CNN, motion fusion, Meta checkpoint transfer, failed live tests, weight audit, and reproduction commands.
+- [tap learning](tap-learning.md): cue-only tap recording with EMG-onset labels, the band-model-score probe for ring/pinky taps, and leave-one-session-out evaluation.
 
 ## code and checks
 

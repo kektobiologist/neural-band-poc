@@ -28,7 +28,7 @@ left wrist works too. choose your band hand before starting, or leave it on use 
 
 ## train personal pinch gestures
 
-A webcam-supervised recording, training and live-test workflow lives in `learning/`, starting with neutral and thumb-to-index/middle/ring/pinky pinches. We tested an EMG CNN, EMG/motion feature fusion, and adaptation of Meta's public checkpoint. Offline gains did not carry over reliably to fresh live sessions; this is experimental, not a dependable gesture controller. [Experiment log, results, setup and commands](docs/pinch-learning.md). Recordings and trained weights stay local under ignored `captures/`.
+A webcam-supervised recording, training and live-test workflow lives in `learning/`, starting with neutral and thumb-to-index/middle/ring/pinky pinches. We tested an EMG CNN, EMG/motion feature fusion, and adaptation of Meta's public checkpoint. Offline gains did not carry over reliably to fresh live sessions; this is experimental, not a dependable gesture controller. [Experiment log, results, setup and commands](docs/pinch-learning.md). Recordings and trained weights stay local under ignored `captures/`. A follow-up records cued taps without a webcam and checks whether the band's own model scores separate ring/pinky taps: [tap learning](docs/tap-learning.md).
 
 ## what would be cool
 
