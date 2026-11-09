@@ -27,7 +27,7 @@ def main():
     parser.add_argument('--hold-seconds', type=float, default=3.)
     parser.add_argument('--rest-seconds', type=float, default=3.)
     parser.add_argument('--motion', action='store_true', help='Experimental simultaneous EMG + gyro + quaternion')
-    parser.add_argument('--identity-key', type=Path)
+    parser.add_argument('--identity-key')
     parser.add_argument('--predictor', type=Path, help='Live sensor prediction checkpoint directory')
     parser.add_argument('--meta-checkpoint', type=Path, help='Frozen adapted Meta checkpoint (.pt)')
     parser.add_argument('--meta-source', type=Path, default=ROOT / 'captures/meta-gni-source')

@@ -13,36 +13,21 @@ authentication passed. The user subsequently confirmed end-to-end operation and 
 transmitter-only perfboard build on 2026-10-18. See [AC control](AC_CONTROL.md) for commands
 and test instructions. The `esp32-s3` environment retains the BLE-only probe.
 
-## Previous hardware status — 2026-10-07
+## Identity and hardware status
 
-**Owner authentication and gesture subscription now succeed on ESP32-S3.**
-After re-pairing the band in Meta on the rooted OnePlus, a new enrolled signing
-key was recovered locally. The Mac accepted this key and recorded 29 gesture
-messages and 22,284 motion messages with a clean stream shutdown. The same key
-was provisioned into the ESP32, which reports `OWNER AUTHENTICATION ACCEPTED`
-and `GESTURES READY`. The USB capture recorded 39 real gesture messages,
-including index press, hold, and release events, directly from the ESP32. The
-user subsequently confirmed gestures working in Arduino Serial Monitor.
+Use the current Mac-enrolled Keychain identity documented in the
+[connection guide](../../docs/mac-enrollment.md). The November 9, 2026 identity
+was verified for Mac owner trust and raw EMG; it has **not yet been provisioned
+or verified on the ESP32**. Existing flashed firmware may contain the old key.
 
-The earlier saved key was stale: the Mac rejected it with `0x03001043`, and
-no-owner attempts disconnected before subscription. Re-pairing also invalidated
-the old Mac and ESP32 Bluetooth bonds; the Mac bond was forgotten and only the
-ESP32 NVS partition was cleared before reconnecting. The phone's Meta enrollment
-was preserved, Meta was force-stopped, and phone Bluetooth was switched off.
-Do not unpair in Meta after recovering the key.
+The October 7 ESP32 test verified BLE bonding, L2CAP CoC on PSM 129, AirShield
+TX 27 / RX 26, owner acceptance, and gesture subscription. It recorded 39 real
+gesture messages; the user also confirmed gestures in Arduino Serial Monitor.
+That validates the firmware implementation, not the currently embedded key.
 
-Verified directly on ESP32-S3:
-
-- BLE bonding/encryption, GATT discovery, and L2CAP CoC on PSM 129.
-- Local MTU 512 / peer MTU 970; AirShield TX 27 / RX 26.
-- Enrolled-owner acceptance, peer link setup, and gesture-enable acknowledgement.
-
-Local evidence (ignored by Git):
-`captures/oneplus/repaired-20261007/mac-gestures-fresh.jsonl` and
-`captures/oneplus/repaired-20261007/esp32-fresh.log`.
-The recovered PEM is private in that same ignored directory; do not publish
-it, the generated owner header, or the compiled firmware.
-The original full 16 MB ESP32 flash backup is
+Provision the current Keychain identity using the instructions below. Keep private PEMs,
+generated owner headers, and firmware binaries containing them out of Git.
+The original full flash backup remains local at
 `captures/esp32-s3-original-20261007.bin`.
 
 ## Arduino Serial Monitor
@@ -102,7 +87,7 @@ espressif32 6.12.0, and ESP-IDF 5.5.0 were used.
 ```sh
 python3 -m venv .venv-esp
 .venv-esp/bin/pip install platformio==6.2.0 esptool==5.4.0 cryptography
-.venv-esp/bin/python firmware/band-probe/provision_identity.py /absolute/path/to/enrolled-owner.pem
+.venv-esp/bin/python firmware/band-probe/provision_identity.py keychain:BAND_UUID:PUBLIC_KEY_SHA256
 .venv-esp/bin/pio run -d firmware/band-probe
 .venv-esp/bin/pio run -d firmware/band-probe -t upload --upload-port /dev/cu.usbmodem2101
 ```
@@ -129,29 +114,13 @@ Optional bounded serial capture (new output file required):
 
 ## Recovery and continuation notes
 
-Keep the Android Meta pairing intact and its Bluetooth off while the ESP32 is
-connected. Re-pairing in Meta can change the enrolled owner key and invalidate
-Bluetooth bonds. If owner authentication rejects with `0x03001043`, first test
-the same PEM using the Mac probe; changing the ESP32 signature code does not
-repair a stale identity.
-
-The successful October 7 recovery used the rooted OnePlus (NE2211), Meta
-292.1.0.19.164 / build 969202234, and Frida 17.15.5. A build-checked native hook
-observed the signing identity during an ordinary Android reconnect. Local-only
-recovery script and candidate PEM are in
-`captures/oneplus/repaired-20261007/recover_identity.py` and
-`captures/oneplus/repaired-20261007/owner-candidate-1.pem`. Native offsets are
-build-specific; do not reuse them after an app update without checking anchors.
-The prior September PEM is stale. The abandoned Meta sign-in/enrollment helper
-is archived under ignored `captures/esp32-enrollment/experimental-source/` and
-was not used to obtain the working key.
-
-After recovering the key, Meta was force-stopped and Android Bluetooth disabled
-without unpairing. The Mac test used `mac_band_probe.py --stream-control dial`
-with the new `--identity-key`, then ended before the ESP32 test. The dashboard's
-local identity mapping and selected band were updated on disk; an already
-running dashboard may need a restart to load the new selection. Keep Mac band
-clients stopped while using the ESP32.
+Keep other band clients disconnected while the ESP32 is using the band.
+If owner authentication rejects with `0x03001043`, first verify the PEM with
+`instrumentation/enroll_band.py BAND_UUID --verify-key keychain:BAND_UUID:PUBLIC_KEY_SHA256`.
+If accepted on the Mac, provision that same key into the ESP32 and rebuild;
+changing signature code or enrolling yet another identity does not repair a
+stale embedded key. If the key is rejected on the Mac too, follow the
+[Mac recovery flow](../../docs/mac-enrollment.md#recovery).
 
 If macOS reports “Peer removed pairing information,” forget only the band in
 Mac Bluetooth settings, rescan, and use the fresh CoreBluetooth identifier.

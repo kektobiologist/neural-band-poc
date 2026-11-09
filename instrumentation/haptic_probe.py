@@ -113,7 +113,7 @@ class HapticHandshake(probe.BandHandshake):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('identifier')
-    parser.add_argument('--identity-key', type=Path)
+    parser.add_argument('--identity-key')
     parser.add_argument('--output', required=True, type=Path)
     for name, default in DEFAULT_HAPTICS.items():
         parser.add_argument('--' + name.replace('_', '-'), type=int, default=default)
@@ -125,7 +125,7 @@ def main():
     args = SimpleNamespace(identifier=cli.identifier, identity_key=cli.identity_key,
                            seconds=20, query_device_info=False, end_link_setup=True,
                            stream_control=None, query_config=False, hand=None,
-                           query_manifest=False, dial_settings=None, standby_after=None)
+                           dial_settings=None, standby_after=None)
     probe.BandHandshake = HapticHandshake
     completed = set()
     cancelled = False

@@ -62,31 +62,18 @@ The updated firmware was built and flashed. A live hardware query returned 77%
 on October 9; use the command for a fresh reading. See the firmware README for
 usage and the ignored `captures/esp32-battery-20261009.log` for validation.
 
-## Band connection recovery — 2026-10-07
+## Band identity — updated November 9, 2026
 
-After re-pairing the band with Meta on the rooted OnePlus, the current owner key
-was recovered locally and verified on the Mac: owner accepted, 29 gesture
-messages, 22,284 motion messages, and clean stream shutdown. This replaces the
-stale key that was rejected with `0x03001043`. No new enrollment ceremony was
-performed by the Mac helper; the attempted Meta sign-in helper was not needed.
+Use the [Mac connection guide](mac-enrollment.md) for the verified current Keychain identity,
+CoreBluetooth UUID, and recovery command. The Mac enrolls directly through Meta
+sign-in; the old phone-recovered identity and UUID are superseded.
 
-The key was provisioned into the standalone ESP32-S3 firmware. Hardware now
-reports owner authentication accepted and `GESTURES READY`, with a successful
-input subscription acknowledgement, followed by 39 physical gesture messages
-over USB serial. The user also confirmed it works in Arduino Serial Monitor.
-BLE/L2CAP and AirShield TX 27 / RX 26 work.
-See [the firmware README](../firmware/band-probe/README.md) for gesture-event
-verification and Arduino Serial Monitor instructions. Appliance control remains
-unimplemented.
-
-Re-pairing invalidated the old Bluetooth bonds. The Mac's stale band record was
-forgotten; the ESP32's NVS partition was cleared before a fresh bond. The phone's
-Meta pairing remains intact; Meta is force-stopped and phone Bluetooth is off.
-Do not unpair in Meta after recovering an owner key. The Mac's current identifier
-is `3D2967E8-A095-F778-846A-7C41428BA1B1`; dashboard selection and identity mapping
-were updated on disk. Local private PEM and traces are under the ignored
-`captures/oneplus/repaired-20261007/` directory. The old PEM is preserved for
-historical reference and is no longer the working identity.
+The ESP32 previously passed owner authentication and gesture tests, but has not
+been re-provisioned or re-tested with the November 9 identity. If it rejects its
+embedded key, verify the current Keychain identity on the Mac, then provision that same identity
+and rebuild/upload using the [firmware instructions](../firmware/band-probe/README.md).
+Do not re-enroll just to connect a second client. Stop Mac band clients while
+using the ESP32. Diagnose Bluetooth bond errors separately from owner-key errors.
 
 ## Start here: procurement and next task
 
@@ -210,22 +197,22 @@ Band-recognized gestures arrive from the band; the host does not run the recogni
 
 Custom haptics would be useful for fan speed detents. A `hapticsReq` RPC name/field 17 was recovered in earlier investigation, but its nested parameters have not been decoded and custom haptic playback is **not working/verified**. Do not promise tactile ticks yet.
 
-## Existing Mac/dashboard state and PEM strategy
+## Existing Mac/dashboard identity storage
 
 The existing dashboard is at `http://localhost:8765/`. Its process was running earlier in this conversation; **current liveness was not rechecked for this handoff**. Typical launch command from the repo root is `.venv/bin/python dashboard/server.py`.
 
-The PEM owner identity was provisioned in earlier work. Current `dashboard/server.py` reads `captures/dashboard-identities.json` and passes the selected identity path as `--identity-key` to the band client. Continue using that strategy rather than re-enrolling or replacing the owner identity unnecessarily.
+The owner identity lives in macOS Keychain. Current clients resolve its reference through `~/Library/Application Support/NeuralBand/identities.json`, shared across worktrees. Reuse it without re-enrolling.
 
 Local ignored artifacts relevant to resuming:
 
 - `captures/dashboard-selected-band.json`: selected band (previously Meta Band 00Z9).
 - `captures/dashboard-identities.json`: mapping of band identifier to owner identity path.
-- `captures/oneplus/repaired-20261007/owner-candidate-1.pem`: current verified owner identity; the older paired-session PEM is stale. **Private key: never print its contents, commit it, or copy it into documentation.**
+- The current Keychain identity is recorded in [the connection guide](mac-enrollment.md#current-local-identity--verified-november-9-2026). Clients resolve the durable registry automatically. **Private key: never print or commit its contents.**
 - `captures/mac-band-probe-dashboard-20260930T171050089594.jsonl`: trace examined earlier. Reported 119 non-synthetic raw swipes (26 left, 37 right, 38 down, 18 up), each with a derived equivalent, plus four thumb click events. These are prior trace observations, not a new verification during this documentation update.
 
 The user's real-world observation that swipes work is stronger evidence than merely seeing their enum values. Enum support does not prove every gesture is physically available. Consult `instrumentation/input_service.py`, [gesture notes](gestures.md), [gesture model notes](gesture-models.md), [trust handshake](trust-handshake.md), and [findings](findings.md) for protocol details. This session did not establish table-writing/handwriting recognition as an accessible band feature.
 
-`captures/` is ignored. A fresh clone will not contain the owner PEM or captured traces; the next agent must distinguish local artifacts from tracked project data.
+`captures/` is ignored. A fresh clone will not contain captured traces; the same Mac can still use its durable Keychain identity; the next agent must distinguish local artifacts from tracked project data.
 
 ## Suggested continuation
 

@@ -1,4 +1,4 @@
-"""Authenticate/decrypt a local recording made with capture_airshield_keys.js."""
+"""Authenticate/decrypt saved research recordings with correlated key observations."""
 
 import argparse
 import bisect

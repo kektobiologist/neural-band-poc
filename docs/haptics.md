@@ -11,7 +11,7 @@ the RPC duration unit, and native pattern playback remain unverified.
 Start the dashboard with `python -m dashboard.server` and open
 [localhost:8765](http://localhost:8765). Find/select the band using the existing
 connection controls. An already enrolled band needs its existing owner identity
-configured as described in [the firmware notes](firmware-5c2b1ca1f73b.md).
+configured as described in [the Mac connection guide](mac-enrollment.md).
 
 The **Try a buzz** panel connects automatically when a test button is pressed.
 Keep the hand still to avoid confusing gesture feedback with the test. After
@@ -48,7 +48,6 @@ Run from the repository root with the project's Python environment:
 
 ```sh
 python instrumentation/haptic_probe.py BAND_COREBLUETOOTH_UUID \
-  --identity-key /absolute/path/to/enrolled-owner.pem \
   --amplitude 255 --duration 300 --count 2 --gap-ms 100 \
   --output captures/haptic-double.jsonl
 ```

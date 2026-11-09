@@ -10,7 +10,7 @@ the associated [nature paper](https://www.nature.com/articles/s41586-025-09255-w
 
 [emg2pose](https://github.com/facebookresearch/emg2pose) also releases pretrained hand-pose checkpoints and paired motion-capture data. [emg2qwerty](https://github.com/facebookresearch/emg2qwerty) releases typing data and checkpoints. these are useful research references for richer input, not consumer-band drivers. the repositories carry noncommercial licenses; public weights do not imply unrestricted reuse.
 
-our stream reports eight channels at 2,048 hz, and its interpretation remains an experimental adc view: electrode mapping and voltage calibration are unresolved. matching channel count, placement, filtering, scale and timestamps is necessary before judging transfer; resampling or duplicating eight channels into sixteen does not demonstrate compatibility. see [our raw-stream findings](findings.md#raw-emg-stream-activated-september-14-2026).
+our stream reports eight channels at 2,048 hz, and its interpretation remains an experimental adc view: electrode mapping and voltage calibration are unresolved. matching channel count, placement, filtering, scale and timestamps is necessary before judging transfer; resampling or duplicating eight channels into sixteen does not demonstrate compatibility. see [our raw-stream findings](findings.md#raw-emg).
 
 ## where the consumer model might be
 
