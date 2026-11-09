@@ -44,6 +44,8 @@ def analyze(capture):
     reader.finish()
     if not samples:
         raise ValueError("No supported inference samples found")
+    if any(len(row["scores"]) != len(NATIVE_LABELS) for row in samples):
+        raise ValueError("Native labels describe the nine-output model only")
 
     samples.sort(key=lambda row: row["received_at"])
     times = [row["received_at"] for row in samples]

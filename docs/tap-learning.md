@@ -10,7 +10,7 @@ the [webcam pinch experiments](pinch-learning.md) failed live. Three changes:
 - **Many short sessions across rewears**, scored leave-one-session-out, with a
   per-session rest calibration. The Nov 7 failure was cross-session drift.
 
-Nothing here has been run on the band yet; tests use synthetic sessions only.
+One real session so far ([results](#first-session-november-9)); one session cannot show cross-session reliability.
 
 ## Step 0: do the band's own model scores already separate ring/pinky?
 
@@ -65,16 +65,46 @@ rest features.
 
 ### Calibration knobs
 
-- `--hi` (default 3): a tap's envelope peak must exceed this multiple of the
-  session's median EMG envelope. Raise it if rest cues show `rest_active`; lower
-  it if gentle taps are `missed`.
-- `--lo` (default 1.5): onset is where the envelope last rose through this
+The detector uses the strongest channel, each channel scaled to its own resting
+level. Summing all eight channels diluted ring taps: on the first real session
+ring peaks were 1.5–2.8× summed versus 3.0–9.0× per channel, with rest at 1.8×.
+
+- `--hi` (default 4): a tap's peak must exceed this multiple. Raise it if rest
+  cues show `rest_active`; lower it if gentle taps are `missed`.
+- `--lo` (default 2): onset is where the envelope last rose through this
   multiple before the peak.
-- Taps are searched 0.1–1.2 s after the cue; 0.3 s before the cue must be quiet.
+- Taps are searched 0.1–1.6 s after the cue (median reaction on the first
+  session was ~0.85 s); 0.3 s before the cue must be quiet.
 
 Timing uses the least-delayed receipt to anchor device clocks to host time:
 biased late by at least one 8 ms batch and ignoring clock drift. Fine for a 250 ms
 window; fit a line if sessions get much longer.
+
+## First session (November 9)
+
+`taps-20261109-05`, right wrist, Meta Band 00Z9, Keychain owner identity. All 60
+cues ran; 17,777 EMG batches with zero missing; scores and EMG streamed together
+on one subscription and shut down cleanly. This firmware's model reports
+**pipeline 1, stride 72, three scores**, not the nine-output table in
+[gesture models](gesture-models.md). The probe then exited 1 because its decoder
+accepted only nine scores (since fixed; `session.json` keeps the original status).
+
+Kept taps with the per-channel detector: index 10/12, middle 10/12, ring 8/12,
+pinky 9/12, rest 8/12. Median reaction 0.82–0.93 s. Several cues showed small
+activity 0.1–0.3 s before the cue (anticipation), now tolerated if the tap is at
+least twice as large.
+
+| Features | Accuracy | Balanced | Notable confusion |
+| --- | ---: | ---: | --- |
+| Band model scores (3) | 68.9% | 67.8% | ring predicted middle 6/8 |
+| EMG features | 88.9% | 90.0% | middle predicted ring 3/10 |
+| Both | 86.7% | 87.5% | middle predicted ring 3/10 |
+
+Five-fold within one session: optimistic, and the Nov 7 pinch models lost most
+of a similar within-session score on a fresh wear. **Step 0 answer:** the band's
+three scores separate index, middle and pinky taps from rest, but ring taps look
+like middle taps, so ring needs our own EMG model. Record more sessions with
+re-wears and check leave-one-session-out before trusting the EMG number.
 
 ## Next
 

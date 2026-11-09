@@ -12,6 +12,7 @@ import argparse
 from collections import Counter
 import json
 from pathlib import Path
+import sys
 
 import numpy as np
 
@@ -52,16 +53,36 @@ def device_times(rows):
     return device + np.min(host - device)
 
 
+def replay_scores(rows):
+    """Re-decode saved packets when the live decoder left scores uninterpreted (older captures)."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'instrumentation'))
+    from input_service import InputService
+    samples, at = [], None
+    keep = lambda event, **values: samples.append({**values, 'host_monotonic_ns': at}) if event == 'inference_sample' else None
+    reader = InputService(keep, requested_fields=(2, 4))
+    for row in rows:
+        if row['event'] == 'authenticated_packet':
+            at = row['host_monotonic_ns']
+            reader.feed(bytes.fromhex(row['plaintext']))
+    return samples
+
+
 def envelope(x, smooth=51):
-    """25 ms RMS of the summed first difference: a cheap high-pass that ignores drift."""
+    """Strongest channel's 25 ms RMS of the first difference (a cheap high-pass),
+    in multiples of that channel's session median. Summing channels diluted ring taps."""
     d = np.diff(x, axis=0, prepend=np.full((1, 8), np.nan))
-    return np.sqrt(np.convolve(np.sum(d * d, axis=1), np.ones(smooth) / smooth, 'same'))
+    kernel = np.ones(smooth) / smooth
+    channels = np.sqrt(np.stack([np.convolve(d[:, c] ** 2, kernel, 'same') for c in range(8)], axis=1))
+    channels /= np.nanmedian(channels, axis=0)
+    out = np.full(len(x), np.nan)
+    valid = ~np.isnan(channels).any(axis=1)
+    out[valid] = channels[valid].max(axis=1)
+    return out
 
 
-def label_taps(x, t0, cues, hi=3., lo=1.5, search=(.1, 1.2), quiet=.3):
-    """One event per cue. Thresholds are multiples of the session's median envelope."""
+def label_taps(x, t0, cues, hi=4., lo=2., search=(.1, 1.6), quiet=.3):
+    """One event per cue. Thresholds are multiples of each channel's resting level."""
     env = envelope(x)
-    base = np.nanmedian(env)
     index = lambda t: int(round((t - t0) * RATE))
     events = []
     for cue in cues:
@@ -71,15 +92,16 @@ def label_taps(x, t0, cues, hi=3., lo=1.5, search=(.1, 1.2), quiet=.3):
         if i0 < 64 or i2 + 448 > len(env) or np.isnan(env[i0:i2]).any():
             events.append({**event, 'status': 'gap'})
             continue
-        window = env[i1:i2] / base
+        window = env[i1:i2]
         peak = int(np.argmax(window))
         event['peak_ratio'] = round(float(window[peak]), 2)
-        if env[i0:i1].max() / base >= hi:
-            event['status'] = 'busy'  # still moving when the cue appeared
-        elif cue['label'] == 'rest':
-            event['status'] = 'ok' if window[peak] < hi else 'rest_active'
+        pre = env[i0:i1].max()  # wearers tense slightly in anticipation of the cue
+        if cue['label'] == 'rest':
+            event['status'] = 'ok' if max(pre, window[peak]) < hi else 'busy' if pre >= hi else 'rest_active'
         elif window[peak] < hi:
             event['status'] = 'missed'
+        elif window[peak] < 2 * pre:
+            event['status'] = 'busy'  # the tap does not clearly stand out from earlier activity
         else:
             below = np.flatnonzero(window[:peak] < lo)
             if not len(below):
@@ -96,7 +118,7 @@ def label_taps(x, t0, cues, hi=3., lo=1.5, search=(.1, 1.2), quiet=.3):
     return events
 
 
-def session_features(session, hi=3., lo=1.5):
+def session_features(session, hi=4., lo=2.):
     session = Path(session)
     if json.loads((session / 'session.json').read_text())['status'] != 'complete':
         raise ValueError(f'{session}: session is not complete')
@@ -105,8 +127,11 @@ def session_features(session, hi=3., lo=1.5):
     x, t0 = emg_grid(rows)
     events = label_taps(x, t0, cues, hi, lo)
     scores = [r for r in rows if r['event'] == 'inference_sample']
+    if not scores and any(r['event'] == 'raw_inference_payload' for r in rows):
+        scores = replay_scores(rows)
+    width = len(scores[0]['scores']) if scores else 0
     score_t = device_times(scores) if scores else np.zeros(0)
-    score_v = np.array([r['scores'] for r in scores]).reshape(-1, 9)
+    score_v = np.array([r['scores'] for r in scores]).reshape(len(scores), width)
     kept, emg, meta = [], [], []
     for event in events:
         if event['status'] != 'ok':
@@ -119,10 +144,10 @@ def session_features(session, hi=3., lo=1.5):
         kept.append(event)
         emg.append(window)
         near = (score_t >= event['onset_time'] - .1) & (score_t <= event['onset_time'] + .5)
-        meta.append(score_v[near].max(axis=0) if near.any() else np.full(9, np.nan))
+        meta.append(score_v[near].max(axis=0) if near.any() else np.full(width, np.nan))
     (session / 'taps.json').write_text(json.dumps(events, indent=1) + '\n')
     emg = emg_features(np.array(emg)) if emg else np.zeros((0, 72))
-    return events, kept, emg, np.array(meta).reshape(-1, 9)
+    return events, kept, emg, np.array(meta).reshape(len(kept), width)
 
 
 def evaluate(X, y, groups):
@@ -159,8 +184,8 @@ def rest_normalize(X, y, groups):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('sessions', nargs='+', type=Path)
-    parser.add_argument('--hi', type=float, default=3., help='Tap peak threshold, multiple of median EMG envelope')
-    parser.add_argument('--lo', type=float, default=1.5, help='Onset threshold, multiple of median EMG envelope')
+    parser.add_argument('--hi', type=float, default=4., help="Tap peak threshold, multiple of the strongest channel's resting level")
+    parser.add_argument('--lo', type=float, default=2., help='Onset threshold, same units')
     args = parser.parse_args()
     labels, groups, emg, meta = [], [], [], []
     for number, session in enumerate(args.sessions):
@@ -178,12 +203,16 @@ def main():
         emg.append(e)
         meta.append(m)
     y, groups = np.array(labels), np.array(groups)
-    emg, meta = np.concatenate(emg), np.concatenate(meta)
+    emg = np.concatenate(emg)
     classes = sorted(set(y))
-    has_meta = len(meta) and not np.isnan(meta).all()
+    if len({m.shape[1] for m in meta}) > 1:
+        raise ValueError('Sessions report different band model output counts; analyze them separately')
+    meta = np.concatenate(meta)
+    has_meta = meta.size and not np.isnan(meta).all()
     if has_meta:
-        print('\nBand model peak score per class (mean over taps; columns = native labels)')
-        print(' ' * 10 + ''.join(f'{n[:11]:>12}' for n in NATIVE_LABELS))
+        names = NATIVE_LABELS if meta.shape[1] == len(NATIVE_LABELS) else [f'score {i}' for i in range(meta.shape[1])]
+        print(f'\nBand model peak score per class (mean over taps; {meta.shape[1]} outputs)')
+        print(' ' * 10 + ''.join(f'{n[:11]:>12}' for n in names))
         for label in classes:
             print(f'{label:>10}' + ''.join(f'{v:12.2f}' for v in np.nanmean(meta[y == label], axis=0)))
     else:

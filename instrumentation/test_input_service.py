@@ -123,6 +123,17 @@ class InputServiceTests(unittest.TestCase):
                                            -4.47433614730835, -11.357930183410645, -9.178125381469727,
                                            -9.751757621765137, -10.669570922851562, -11.357930183410645])
 
+    def test_three_score_pipeline_from_current_firmware(self):
+        # Captured November 9, 2026: pipeline 1, stride 72, three logits.
+        payload = bytes.fromhex('08e00410a8a5b2db1a1a0c38a54bc10c1d58c129cd4fc15001')
+        config = field(1, 0) + field(2, 72) + field(3, 1) + field(5, 3)
+        self.feed(typed_frame(7, [0x02000315], field(1, 5) + field(2, 1) + field(6, field(46, config))))
+        self.feed(typed_frame(5, [0x0200020c], payload))
+        event, sample = self.events[-1]
+        self.assertEqual((event, sample['sequence'], sample['pipeline_type'], len(sample['scores'])),
+                         ('inference_sample', 608, 1, 3))
+        self.assertAlmostEqual(sample['scores'][0], -12.7279, places=3)
+
     def test_inference_does_not_interpret_changed_shape_or_nonfinite_scores(self):
         self.feed(typed_frame(7, [0x02000315], field(1, 5) + field(2, 1) + field(6, field(46, field(5, 9)))))
         self.feed(typed_frame(5, [0x0200020c], field(1, 1) + field(2, 100) + field(3, bytes(32)) + field(10, 2)))

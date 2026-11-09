@@ -109,12 +109,13 @@ class InputService:
                 data, pipeline = fields.get((3, 2)), fields.get((10, 0))
                 if sequence is None or timestamp is None or data is None or pipeline is None:
                     raise ValueError("inference sample lacks sequence, timestamp, channels or pipeline")
-                # Only the nine-float payload has been observed and compared with the config.
-                if not self.inference_config or self.inference_config["num_logits"] != 9 or len(data) != 36:
+                # Observed: nine floats (pipeline 2) and three (pipeline 1); trust only the config's count.
+                count = (self.inference_config or {}).get("num_logits")
+                if not count or len(data) != 4 * count:
                     self.emit("raw_inference_payload", sequence=sequence, timestamp_us=timestamp,
                               pipeline_type=pipeline, payload=payload.hex(), interpreted=False)
                     continue
-                scores = list(struct.unpack("<9f", data))
+                scores = list(struct.unpack(f"<{count}f", data))
                 if not all(math.isfinite(value) for value in scores):
                     raise ValueError("inference sample contains non-finite scores")
                 previous = self.inference_sequences.get(pipeline)
