@@ -7,8 +7,8 @@ import tempfile
 import unittest
 
 import numpy as np
-from learning.tap_record import schedule
-from learning.taps import evaluate, main, session_features
+from learning.tap_record import Pacer, schedule
+from learning.taps import channel_envelopes, evaluate, live_level, main, session_features
 
 GESTURES = ['index', 'ring', 'pinky']
 
@@ -55,6 +55,28 @@ class TapTests(unittest.TestCase):
         gaps = np.diff([c['offset_seconds'] for c in cues])
         self.assertTrue(np.all(gaps >= 2.) and np.all(gaps <= 2.5) and gaps.std() > 0)
         self.assertEqual(cues[0]['offset_seconds'], 4.)
+
+    def test_pacer_waits_for_settle_and_reports_misses(self):
+        pacer = Pacer()
+        self.assertIsNone(pacer.update(.05, 50.))  # learning.taps ignores the first 0.1 s too
+        self.assertIsNone(pacer.update(.8, 9.))
+        self.assertIsNone(pacer.update(1., 1.5))
+        self.assertIsNone(pacer.update(1.2, 3.))  # back above lo restarts settling
+        self.assertIsNone(pacer.update(1.3, 1.))
+        self.assertEqual(pacer.update(1.6, 1.), 'tap')
+        missed = Pacer()
+        self.assertIsNone(missed.update(1., 3.9))
+        self.assertEqual(missed.update(1.6, 1.), 'missed')
+        restless = Pacer()
+        restless.update(.5, 9.)
+        self.assertEqual(restless.update(3., 3.), 'tap')
+
+    def test_live_level_matches_offline_envelope(self):
+        x = np.random.default_rng(1).normal(size=(4096, 8)) * 20
+        x[3000:3200, 2] *= 10
+        scale = np.nanmedian(channel_envelopes(x), axis=0)
+        # Offline windows are centred; the live window ends at the newest sample.
+        self.assertAlmostEqual(live_level(x[:3126], scale), (channel_envelopes(x)[3100] / scale).max())
 
     def test_onsets_features_and_separation(self):
         with tempfile.TemporaryDirectory() as directory:

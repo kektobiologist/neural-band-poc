@@ -31,17 +31,25 @@ python -m learning.tap_record BAND_UUID --output captures/taps-20261110-01
 
 The owner identity comes from the saved Keychain registry, as for every probe
 connection ([Mac enrollment](mac-enrollment.md)); `--identity-key` overrides it.
-Defaults: index, middle, ring, pinky and rest, 12 cues each, one cue every
-2–2.5 s (jittered so you react instead of keeping rhythm), about 2.5 minutes.
+Defaults: index, middle, ring, pinky and rest, 12 cues each.
 The terminal shows `TAP thumb + RING` with a bell; tap once quickly and relax.
 On `stay relaxed`, do nothing. Ctrl-C aborts (aborted sessions are rejected).
 Custom gestures: `--gestures ring pinky fist` (names are only labels and cues).
+
+Pacing is live. The first 5 s of rest calibrate each channel's resting level;
+then the same strongest-channel detector as `learning.taps` (`--hi`/`--lo`)
+advances once a tap has stayed below `--lo` for 0.3 s, at least 1.5 s after its
+cue, plus 0–0.5 s jitter. A tap cue with no burst within 1.6 s shows `no tap
+seen` and is repeated once at the end. Rest cues last `--gap` (2 s) plus jitter.
+With a ~0.85 s reaction that is about 110 s per session instead of 141 s. Live
+results are only pacing hints: `cues.jsonl` records them (`live`, `attempt`),
+but `learning.taps` relabels every cue offline.
 
 Take the band off and put it back on between sessions. Aim for 8–10 sessions
 over 2–3 days. Vary arm position a little between sessions, not within one.
 
 Files in the session directory: `band.jsonl` (probe capture, contains session
-key material, keep local), `cues.jsonl` (cue label and host monotonic time),
+key material, keep local), `cues.jsonl` (cue label, host monotonic time, live result),
 `session.json`, `probe.log`.
 
 ## Analyze

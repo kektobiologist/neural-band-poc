@@ -67,12 +67,23 @@ def replay_scores(rows):
     return samples
 
 
-def envelope(x, smooth=51):
-    """Strongest channel's 25 ms RMS of the first difference (a cheap high-pass),
-    in multiples of that channel's session median. Summing channels diluted ring taps."""
+def channel_envelopes(x, smooth=51):
+    """Per-channel 25 ms RMS of the first difference: a cheap high-pass that ignores drift."""
     d = np.diff(x, axis=0, prepend=np.full((1, 8), np.nan))
     kernel = np.ones(smooth) / smooth
-    channels = np.sqrt(np.stack([np.convolve(d[:, c] ** 2, kernel, 'same') for c in range(8)], axis=1))
+    return np.sqrt(np.stack([np.convolve(d[:, c] ** 2, kernel, 'same') for c in range(8)], axis=1))
+
+
+def live_level(recent, scale, smooth=51):
+    """envelope() at the newest sample, given per-channel resting levels (recorder pacing)."""
+    d = np.diff(np.asarray(recent, dtype=np.float64)[-smooth - 1:], axis=0)
+    return float(np.max(np.sqrt(np.mean(d * d, axis=0)) / scale))
+
+
+def envelope(x, smooth=51):
+    """Strongest channel, in multiples of that channel's session median.
+    Summing channels diluted ring taps."""
+    channels = channel_envelopes(x, smooth)
     channels /= np.nanmedian(channels, axis=0)
     out = np.full(len(x), np.nan)
     valid = ~np.isnan(channels).any(axis=1)
